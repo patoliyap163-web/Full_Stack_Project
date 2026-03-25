@@ -1,25 +1,27 @@
-import React from 'react';
+import React from "react";
 
 const ScholarshipsManagement = ({
   scholarships,
-  setScholarships,
   formData,
-  setFormData,
   editId,
-  setEditId,
+  handleChange,
   handleSubmit,
   handleDelete,
-  handleEdit
+  handleEdit,
+  scholarshipsLoading,
+  scholarshipsError
 }) => {
   return (
     <>
       <div style={styles.headerSection}>
-        <h1 style={{margin: 0, fontSize: "32px", fontWeight: "700"}}>📚 Manage Scholarships</h1>
-        <p style={{margin: "5px 0 0 0", color: "#666", fontSize: "14px"}}>Create and manage scholarship programs</p>
+        <h1 style={{ margin: 0, fontSize: "32px", fontWeight: "700" }}>Manage Scholarships</h1>
+        <p style={{ margin: "5px 0 0 0", color: "#666", fontSize: "14px" }}>
+          Create and manage scholarship programs
+        </p>
       </div>
 
       <div style={styles.formContainer}>
-        <h2 style={{marginTop: 0}}>{editId ? "✏️ Edit Scholarship" : "➕ Add New Scholarship"}</h2>
+        <h2 style={{ marginTop: 0 }}>{editId ? "Edit Scholarship" : "Add New Scholarship"}</h2>
         <form onSubmit={handleSubmit} style={styles.scholarshipForm}>
           <div style={styles.formRow}>
             <div style={styles.formGroup}>
@@ -28,26 +30,29 @@ const ScholarshipsManagement = ({
                 name="title"
                 placeholder="e.g., Merit Excellence Award"
                 value={formData.title}
-                onChange={(e) => setFormData({...formData, title: e.target.value})}
+                onChange={handleChange}
                 style={styles.input}
                 required
               />
             </div>
+
             <div style={styles.formGroup}>
               <label style={styles.label}>Category</label>
               <select
                 name="category"
                 value={formData.category}
-                onChange={(e) => setFormData({...formData, category: e.target.value})}
+                onChange={handleChange}
                 style={styles.input}
               >
                 <option value="">-- Select Category --</option>
+                <option value="Academic">Academic</option>
                 <option value="Merit-based">Merit-based</option>
                 <option value="Need-based">Need-based</option>
                 <option value="Other">Other</option>
               </select>
             </div>
           </div>
+
           <div style={styles.formRow}>
             <div style={styles.formGroup}>
               <label style={styles.label}>Amount ($) *</label>
@@ -56,23 +61,25 @@ const ScholarshipsManagement = ({
                 type="number"
                 placeholder="e.g., 5000"
                 value={formData.amount}
-                onChange={(e) => setFormData({...formData, amount: e.target.value})}
+                onChange={handleChange}
                 style={styles.input}
                 required
               />
             </div>
+
             <div style={styles.formGroup}>
               <label style={styles.label}>Deadline *</label>
               <input
                 name="deadline"
                 type="date"
                 value={formData.deadline}
-                onChange={(e) => setFormData({...formData, deadline: e.target.value})}
+                onChange={handleChange}
                 style={styles.input}
                 required
               />
             </div>
           </div>
+
           <div style={styles.formRow}>
             <div style={styles.formGroup}>
               <label style={styles.label}>Description *</label>
@@ -80,23 +87,25 @@ const ScholarshipsManagement = ({
                 name="description"
                 placeholder="Describe the scholarship requirements and benefits"
                 value={formData.description}
-                onChange={(e) => setFormData({...formData, description: e.target.value})}
-                style={{...styles.input, minHeight: "80px", resize: "vertical"}}
+                onChange={handleChange}
+                style={{ ...styles.input, minHeight: "80px", resize: "vertical" }}
                 required
               />
             </div>
+
             <div style={styles.formGroup}>
               <label style={styles.label}>Eligibility *</label>
               <textarea
                 name="eligibility"
                 placeholder="Who can apply for this scholarship?"
                 value={formData.eligibility}
-                onChange={(e) => setFormData({...formData, eligibility: e.target.value})}
-                style={{...styles.input, minHeight: "80px", resize: "vertical"}}
+                onChange={handleChange}
+                style={{ ...styles.input, minHeight: "80px", resize: "vertical" }}
                 required
               />
             </div>
           </div>
+
           <div style={styles.formRow}>
             <div style={styles.formGroup}>
               <label style={styles.label}>Min GPA</label>
@@ -108,95 +117,113 @@ const ScholarshipsManagement = ({
                 max="4.0"
                 placeholder="e.g., 3.0"
                 value={formData.gpa}
-                onChange={(e) => setFormData({...formData, gpa: e.target.value})}
+                onChange={handleChange}
                 style={styles.input}
               />
             </div>
+
             <div style={styles.formGroup}>
               <label style={styles.label}>Benefits</label>
               <textarea
                 name="benefits"
                 placeholder="Additional benefits or perks"
                 value={formData.benefits}
-                onChange={(e) => setFormData({...formData, benefits: e.target.value})}
-                style={{...styles.input, minHeight: "60px", resize: "vertical"}}
+                onChange={handleChange}
+                style={{ ...styles.input, minHeight: "60px", resize: "vertical" }}
               />
             </div>
           </div>
+
           <div style={styles.formGroup}>
             <label style={styles.label}>Requirements</label>
             <textarea
               name="requirements"
               placeholder="Specific requirements or documents needed"
               value={formData.requirements}
-              onChange={(e) => setFormData({...formData, requirements: e.target.value})}
-              style={{...styles.input, minHeight: "60px", resize: "vertical"}}
+              onChange={handleChange}
+              style={{ ...styles.input, minHeight: "60px", resize: "vertical" }}
             />
           </div>
+
           <button type="submit" style={styles.submitBtn}>
-            {editId ? "✏️ Update Scholarship" : "➕ Add Scholarship"}
+            {editId ? "Update Scholarship" : "Add Scholarship"}
           </button>
         </form>
       </div>
 
       <div style={styles.scholarshipsGrid}>
-        {scholarships.map((item) => (
-          <div key={item.id} style={styles.scholarshipCard}>
-            <div style={styles.cardHeader}>
-              <div>
-                <h3 style={{margin: "0 0 8px 0", color: "white"}}>{item.title}</h3>
-                <span style={styles.categoryBadge}>{item.category || "Scholarship"}</span>
+        {scholarshipsLoading && <div style={styles.infoState}>Loading scholarships...</div>}
+
+        {!scholarshipsLoading && scholarshipsError && (
+          <div style={styles.errorState}>{scholarshipsError}</div>
+        )}
+
+        {!scholarshipsLoading && !scholarshipsError && scholarships.length === 0 && (
+          <div style={styles.infoState}>No scholarships found for this admin yet.</div>
+        )}
+
+        {!scholarshipsLoading &&
+          !scholarshipsError &&
+          scholarships.map((item) => (
+            <div key={item.id} style={styles.scholarshipCard}>
+              <div style={styles.cardHeader}>
+                <div>
+                  <h3 style={{ margin: "0 0 8px 0", color: "white" }}>{item.title}</h3>
+                  <span style={styles.categoryBadge}>{item.category || "Scholarship"}</span>
+                </div>
+
+                <div style={styles.amountBox}>
+                  <span style={styles.currencySymbol}>$</span>
+                  <span style={styles.amountValue}>{item.amount}</span>
+                </div>
               </div>
-              <div style={styles.amountBox}>
-                <span style={styles.currencySymbol}>$</span>
-                <span style={styles.amountValue}>{item.amount}</span>
-              </div>
-            </div>
 
-            <div style={styles.cardSection}>
-              <h4 style={styles.sectionTitle}>📝 Description</h4>
-              <p style={styles.cardText}>{item.description}</p>
-            </div>
-
-            <div style={styles.cardSection}>
-              <h4 style={styles.sectionTitle}>✅ Eligibility</h4>
-              <p style={styles.cardText}>{item.eligibility}</p>
-            </div>
-
-            {item.gpa && (
               <div style={styles.cardSection}>
-                <h4 style={styles.sectionTitle}>📊 Min GPA: <strong>{item.gpa}</strong></h4>
+                <h4 style={styles.sectionTitle}>Description</h4>
+                <p style={styles.cardText}>{item.description}</p>
               </div>
-            )}
 
-            {item.benefits && (
               <div style={styles.cardSection}>
-                <h4 style={styles.sectionTitle}>🎁 Benefits</h4>
-                <p style={styles.cardText}>{item.benefits}</p>
+                <h4 style={styles.sectionTitle}>Eligibility</h4>
+                <p style={styles.cardText}>{item.eligibility}</p>
               </div>
-            )}
 
-            {item.requirements && (
-              <div style={styles.cardSection}>
-                <h4 style={styles.sectionTitle}>📋 Requirements</h4>
-                <p style={styles.cardText}>{item.requirements}</p>
+              {item.gpa !== null && item.gpa !== undefined && item.gpa !== "" && (
+                <div style={styles.cardSection}>
+                  <h4 style={styles.sectionTitle}>
+                    Min GPA: <strong>{item.gpa}</strong>
+                  </h4>
+                </div>
+              )}
+
+              {item.benefits && (
+                <div style={styles.cardSection}>
+                  <h4 style={styles.sectionTitle}>Benefits</h4>
+                  <p style={styles.cardText}>{item.benefits}</p>
+                </div>
+              )}
+
+              {item.requirements && (
+                <div style={styles.cardSection}>
+                  <h4 style={styles.sectionTitle}>Requirements</h4>
+                  <p style={styles.cardText}>{item.requirements}</p>
+                </div>
+              )}
+
+              <div style={styles.deadlineSection}>
+                Deadline: <strong>{item.deadline}</strong>
               </div>
-            )}
 
-            <div style={styles.deadlineSection}>
-              <span style={styles.deadlineIcon}>📅</span> Deadline: <strong>{item.deadline}</strong>
+              <div style={styles.cardActions}>
+                <button type="button" style={styles.editBtn} onClick={() => handleEdit(item)}>
+                  Edit
+                </button>
+                <button type="button" style={styles.deleteBtn} onClick={() => handleDelete(item.id)}>
+                  Delete
+                </button>
+              </div>
             </div>
-
-            <div style={styles.cardActions}>
-              <button style={styles.editBtn} onClick={() => handleEdit(item)}>
-                ✏️ Edit
-              </button>
-              <button style={styles.deleteBtn} onClick={() => handleDelete(item.id)}>
-                🗑️ Delete
-              </button>
-            </div>
-          </div>
-        ))}
+          ))}
       </div>
     </>
   );
@@ -253,6 +280,22 @@ const styles = {
     transition: "all 0.3s ease",
     marginTop: "10px"
   },
+  infoState: {
+    padding: "18px 20px",
+    background: "#eff6ff",
+    border: "1px solid #bfdbfe",
+    borderRadius: "10px",
+    color: "#1d4ed8",
+    fontWeight: "500"
+  },
+  errorState: {
+    padding: "18px 20px",
+    background: "#fef2f2",
+    border: "1px solid #fecaca",
+    borderRadius: "10px",
+    color: "#b91c1c",
+    fontWeight: "500"
+  },
   scholarshipsGrid: {
     display: "grid",
     gridTemplateColumns: "1fr",
@@ -266,11 +309,7 @@ const styles = {
     transition: "all 0.3s ease",
     cursor: "pointer",
     padding: "0",
-    border: "1px solid #e2e8f0",
-    "&:hover": {
-      transform: "translateY(-8px)",
-      boxShadow: "0 12px 24px rgba(0,0,0,0.12)"
-    }
+    border: "1px solid #e2e8f0"
   },
   cardHeader: {
     padding: "20px",
@@ -331,9 +370,6 @@ const styles = {
     fontSize: "13px",
     fontWeight: "500",
     color: "#92400e"
-  },
-  deadlineIcon: {
-    marginRight: "8px"
   },
   cardActions: {
     padding: "15px 20px",

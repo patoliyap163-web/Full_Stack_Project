@@ -4,6 +4,9 @@ import autoTable from "jspdf-autotable";
 import * as XLSX from "xlsx";
 import { saveAs } from "file-saver";
 
+// Import API functions
+import { getScholarshipsByAdmin, createScholarship } from "../services/api";
+
 // Import decoupled components
 import DashboardOverview from "../components/admin/DashboardOverview";
 import ScholarshipsManagement from "../components/admin/ScholarshipsManagement";
@@ -16,6 +19,9 @@ import AdminProfile from "../components/admin/AdminProfile";
 function AdminDashboard() {
   const [active, setActive] = useState("dashboard");
   const [adminEmail, setAdminEmail] = useState("");
+  const [scholarships, setScholarships] = useState([]);
+  const [scholarshipsLoading, setScholarshipsLoading] = useState(false);
+  const [scholarshipsError, setScholarshipsError] = useState("");
   const [adminProfile, setAdminProfile] = useState({
     name: "Admin User",
     email: "admin@scholarship.com",
@@ -53,10 +59,39 @@ function AdminDashboard() {
     }
   }, []);
 
-  const [scholarships, setScholarships] = useState(() => {
-    const saved = localStorage.getItem("scholarships");
-    return saved ? JSON.parse(saved) : [];
-  });
+  // Fetch scholarships for the logged-in admin
+  useEffect(() => {
+    const fetchAdminScholarships = async () => {
+      try {
+        setScholarshipsLoading(true);
+        setScholarshipsError("");
+        const stored = sessionStorage.getItem("user");
+        const user = stored ? JSON.parse(stored) : null;
+        
+        if (user && user.role === "admin" && user.id) {
+          const response = await getScholarshipsByAdmin(user.id);
+          if (response.success) {
+            setScholarships(response.data || []);
+          } else {
+            setScholarshipsError(response.message || "Failed to load scholarships");
+          }
+        } else {
+          setScholarshipsError("Admin user not found");
+        }
+      } catch (err) {
+        console.error("Error fetching admin scholarships:", err);
+        if (err.message.includes("<!DOCTYPE")) {
+          setScholarshipsError("Backend service is currently unavailable. Please try again later.");
+        } else {
+          setScholarshipsError(err.message || "Failed to load scholarships");
+        }
+      } finally {
+        setScholarshipsLoading(false);
+      }
+    };
+
+    fetchAdminScholarships();
+  }, []);
 
   const [financialAid, setFinancialAid] = useState(() => {
     const saved = localStorage.getItem("financialAid");
@@ -192,7 +227,7 @@ function AdminDashboard() {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
 
     if (!formData.title || !formData.amount || !formData.deadline || !formData.description || !formData.eligibility) {
@@ -200,22 +235,71 @@ function AdminDashboard() {
       return;
     }
 
-    if (editId) {
-      setScholarships(
-        scholarships.map((item) =>
-          item.id === editId ? { ...item, ...formData } : item
-        )
-      );
-      setEditId(null);
-    } else {
-      const newScholarship = {
-        id: Date.now(),
-        ...formData
-      };
-      setScholarships([...scholarships, newScholarship]);
-    }
+    try {
+      const stored = sessionStorage.getItem("user");
+      const user = stored ? JSON.parse(stored) : null;
 
-    setFormData({ title: "", amount: "", deadline: "", description: "", eligibility: "", category: "", gpa: "", benefits: "", requirements: "" });
+      if (!user || !user.id) {
+        alert("Admin user not found. Please login again.");
+        return;
+      }
+
+      if (editId) {
+        // For editing, update local state (ideally should use update API)
+        setScholarships(
+          scholarships.map((item) =>
+            item.id === editId
+              ? {
+                  ...item,
+                  ...formData,
+                  amount: parseFloat(formData.amount),
+                  gpa: formData.gpa ? parseFloat(formData.gpa) : null
+                }
+              : item
+          )
+        );
+        setEditId(null);
+        alert("Scholarship updated successfully!");
+      } else {
+        // Create new scholarship via API
+        const scholarshipData = {
+          title: formData.title,
+          category: formData.category || "Academic",
+          amount: parseFloat(formData.amount),
+          gpa: formData.gpa ? parseFloat(formData.gpa) : null,
+          deadline: formData.deadline,
+          description: formData.description,
+          eligibility: formData.eligibility,
+          benefits: formData.benefits || "",
+          requirements: formData.requirements || "",
+          admin: {
+            id: user.id
+          }
+        };
+
+        const response = await createScholarship(scholarshipData);
+        if (response.success) {
+          // Refresh scholarships list
+          const updatedResponse = await getScholarshipsByAdmin(user.id);
+          if (updatedResponse.success) {
+            setScholarships(updatedResponse.data || []);
+          }
+          alert("Scholarship created successfully!");
+        } else {
+          alert(response.message || "Failed to create scholarship");
+        }
+      }
+
+      setFormData({ title: "", amount: "", deadline: "", description: "", eligibility: "", category: "", gpa: "", benefits: "", requirements: "" });
+      setScholarshipsError("");
+    } catch (err) {
+      console.error("Error handling scholarship:", err);
+      if (err.message.includes("<!DOCTYPE")) {
+        alert("Backend service is currently unavailable. Please try again later.");
+      } else {
+        alert(err.message || "Failed to save scholarship");
+      }
+    }
   };
 
   const handleDelete = (id) => {
@@ -403,6 +487,8 @@ function AdminDashboard() {
             handleSubmit={handleSubmit}
             handleEdit={handleEdit}
             handleDelete={handleDelete}
+            scholarshipsLoading={scholarshipsLoading}
+            scholarshipsError={scholarshipsError}
           />
         )}
 

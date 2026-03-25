@@ -1,21 +1,31 @@
 // API service functions
 
+const API_BASE_URL = "http://localhost:8080";
+
+const parseResponse = async (response, fallbackMessage) => {
+  const data = await response.json();
+
+  if (!response.ok) {
+    throw new Error(data?.message || fallbackMessage);
+  }
+
+  return data;
+};
+
 // Function to login user
 export const loginUser = async (email, password) => {
   try {
-    const response = await fetch('http://localhost:8080/auth/login', {
-      method: 'POST',
+    const response = await fetch(`${API_BASE_URL}/auth/login`, {
+      method: "POST",
       headers: {
-        'Content-Type': 'application/json',
+        "Content-Type": "application/json",
       },
       body: JSON.stringify({ email, password }),
     });
-    if (!response.ok) {
-      throw new Error('Login failed');
-    }
-    return await response.json();
+
+    return await parseResponse(response, "Login failed");
   } catch (error) {
-    console.error('Error logging in:', error);
+    console.error("Error logging in:", error);
     throw error;
   }
 };
@@ -23,19 +33,17 @@ export const loginUser = async (email, password) => {
 // Function to register user
 export const registerUser = async (name, email, password, role) => {
   try {
-    const response = await fetch('http://localhost:8080/auth/register', {
-      method: 'POST',
+    const response = await fetch(`${API_BASE_URL}/auth/register`, {
+      method: "POST",
       headers: {
-        'Content-Type': 'application/json',
+        "Content-Type": "application/json",
       },
       body: JSON.stringify({ name, email, password, role }),
     });
-    if (!response.ok) {
-      throw new Error('Registration failed');
-    }
-    return await response.json();
+
+    return await parseResponse(response, "Registration failed");
   } catch (error) {
-    console.error('Error registering:', error);
+    console.error("Error registering:", error);
     throw error;
   }
 };
@@ -43,18 +51,51 @@ export const registerUser = async (name, email, password, role) => {
 // Function to get all scholarships
 export const getScholarships = async () => {
   try {
-    const response = await fetch('http://localhost:8080/api/scholarships', {
-      method: 'GET',
+    const response = await fetch(`${API_BASE_URL}/api/scholarships`, {
+      method: "GET",
       headers: {
-        'Content-Type': 'application/json',
+        "Content-Type": "application/json",
       },
     });
-    if (!response.ok) {
-      throw new Error('Failed to fetch scholarships');
-    }
-    return await response.json();
+
+    return await parseResponse(response, "Failed to fetch scholarships");
   } catch (error) {
-    console.error('Error fetching scholarships:', error);
+    console.error("Error fetching scholarships:", error);
+    throw error;
+  }
+};
+
+// Function to create a scholarship
+export const createScholarship = async (scholarshipData) => {
+  try {
+    const response = await fetch(`${API_BASE_URL}/api/scholarships`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(scholarshipData),
+    });
+
+    return await parseResponse(response, "Failed to create scholarship");
+  } catch (error) {
+    console.error("Error creating scholarship:", error);
+    throw error;
+  }
+};
+
+// Function to get scholarships for a specific admin
+export const getScholarshipsByAdmin = async (adminId) => {
+  try {
+    const response = await fetch(`${API_BASE_URL}/api/scholarships/admin/${adminId}`, {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+      },
+    });
+
+    return await parseResponse(response, "Failed to fetch admin scholarships");
+  } catch (error) {
+    console.error("Error fetching admin scholarships:", error);
     throw error;
   }
 };
