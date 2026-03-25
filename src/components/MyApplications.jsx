@@ -1,39 +1,39 @@
-import React from 'react';
+import React from "react";
 
-const MyApplications = ({ applications, studentName }) => {
-  const myApplications = applications.filter(
-    (app) => app.studentName === studentName
-  );
+const MyApplications = ({ applications }) => {
+  const myApplications = applications || [];
 
-  const getApprovedCount = () => myApplications.filter(a => a.status === "Approved").length;
-  const getPendingCount = () => myApplications.filter(a => a.status === "Pending").length;
-  const getRejectedCount = () => myApplications.filter(a => a.status === "Rejected").length;
+  const getApprovedCount = () => myApplications.filter((a) => a.status === "APPROVED").length;
+  const getPendingCount = () => myApplications.filter((a) => a.status === "PENDING").length;
+  const getRejectedCount = () => myApplications.filter((a) => a.status === "REJECTED").length;
 
   return (
     <>
       <div style={styles.headerSection}>
-        <h1 style={{margin: 0, fontSize: "32px", fontWeight: "700"}}>📋 My Applications</h1>
-        <p style={{margin: "5px 0 0 0", color: "#666", fontSize: "14px"}}>Track your scholarship application status in real-time</p>
+        <h1 style={{ margin: 0, fontSize: "32px", fontWeight: "700" }}>My Applications</h1>
+        <p style={{ margin: "5px 0 0 0", color: "#666", fontSize: "14px" }}>
+          Track your scholarship and financial aid application status in real-time
+        </p>
       </div>
 
       <div style={styles.statsGrid}>
         <div style={styles.statCard}>
-          <div style={{fontSize: "32px"}}>✅</div>
+          <div style={{ fontSize: "32px" }}>Approved</div>
           <p>Approved</p>
           <h3>{getApprovedCount()}</h3>
         </div>
         <div style={styles.statCard}>
-          <div style={{fontSize: "32px"}}>⏳</div>
+          <div style={{ fontSize: "32px" }}>Pending</div>
           <p>Pending</p>
           <h3>{getPendingCount()}</h3>
         </div>
         <div style={styles.statCard}>
-          <div style={{fontSize: "32px"}}>❌</div>
+          <div style={{ fontSize: "32px" }}>Rejected</div>
           <p>Rejected</p>
           <h3>{getRejectedCount()}</h3>
         </div>
         <div style={styles.statCard}>
-          <div style={{fontSize: "32px"}}>📊</div>
+          <div style={{ fontSize: "32px" }}>Total</div>
           <p>Total</p>
           <h3>{myApplications.length}</h3>
         </div>
@@ -41,7 +41,7 @@ const MyApplications = ({ applications, studentName }) => {
 
       {myApplications.length === 0 ? (
         <div style={styles.emptyState}>
-          <p style={{fontSize: "18px", color: "#666"}}>No applications yet. Start exploring scholarships!</p>
+          <p style={{ fontSize: "18px", color: "#666" }}>No applications yet. Start exploring scholarships!</p>
         </div>
       ) : (
         <div style={styles.applicationsContainer}>
@@ -49,29 +49,42 @@ const MyApplications = ({ applications, studentName }) => {
             <div key={app.id} style={styles.applicationCard}>
               <div style={styles.appCardHeader}>
                 <div>
-                  <h3 style={{margin: "0 0 5px 0"}}>{app.scholarshipTitle}</h3>
-                  <p style={{margin: 0, color: "#666", fontSize: "13px"}}>Applied on {app.appliedDate}</p>
+                  <h3 style={{ margin: "0 0 5px 0" }}>
+                    {app.scholarship?.title || app.financialAid?.title || "Application"}
+                  </h3>
+                  <p style={{ margin: "0 0 5px 0", color: "#64748b", fontSize: "12px", fontWeight: "600" }}>
+                    {app.scholarship ? "Scholarship" : "Financial Aid"}
+                  </p>
+                  <p style={{ margin: 0, color: "#666", fontSize: "13px" }}>
+                    Applied on {app.appliedAt ? new Date(app.appliedAt).toLocaleDateString() : "N/A"}
+                  </p>
                   {app.description && (
-                    <p style={{margin: "5px 0 0 0", color: "#64748b", fontSize: "13px"}}>Description: {app.description}</p>
+                    <p style={{ margin: "5px 0 0 0", color: "#64748b", fontSize: "13px" }}>
+                      Description: {app.description}
+                    </p>
                   )}
                 </div>
-                <span style={{
-                  padding: "8px 16px",
-                  borderRadius: "20px",
-                  fontWeight: "600",
-                  fontSize: "13px",
-                  background: app.status === "Approved" ? "#d1fae5" : app.status === "Pending" ? "#fef3c7" : "#fee2e2",
-                  color: app.status === "Approved" ? "#065f46" : app.status === "Pending" ? "#92400e" : "#991b1b"
-                }}>
+                <span
+                  style={{
+                    padding: "8px 16px",
+                    borderRadius: "20px",
+                    fontWeight: "600",
+                    fontSize: "13px",
+                    background: app.status === "APPROVED" ? "#d1fae5" : app.status === "PENDING" ? "#fef3c7" : "#fee2e2",
+                    color: app.status === "APPROVED" ? "#065f46" : app.status === "PENDING" ? "#92400e" : "#991b1b"
+                  }}
+                >
                   {app.status}
                 </span>
               </div>
               <div style={styles.progressBar}>
-                <div style={{
-                  ...styles.progressFill,
-                  width: app.status === "Approved" ? "100%" : app.status === "Pending" ? "50%" : "0%",
-                  background: app.status === "Approved" ? "#10b981" : app.status === "Pending" ? "#f59e0b" : "#ef4444"
-                }}></div>
+                <div
+                  style={{
+                    ...styles.progressFill,
+                    width: app.status === "APPROVED" ? "100%" : app.status === "PENDING" ? "50%" : "0%",
+                    background: app.status === "APPROVED" ? "#10b981" : app.status === "PENDING" ? "#f59e0b" : "#ef4444"
+                  }}
+                />
               </div>
             </div>
           ))}

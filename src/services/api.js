@@ -238,3 +238,38 @@ export const getFinancialAidByAdmin = async (adminId) => {
     throw error;
   }
 };
+
+// Function to get applications for a specific student
+export const getApplicationsByStudent = async (studentId) => {
+  try {
+    const response = await fetch(`${API_BASE_URL}/api/application/student/${studentId}`, {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+      },
+    });
+
+    return await parseResponse(response, "Failed to fetch student applications");
+  } catch (error) {
+    console.error("Error fetching student applications:", error);
+    throw error;
+  }
+};
+
+// Function to create a scholarship application
+export const createApplication = async (applicationData) => {
+  try {
+    const response = await fetch(`${API_BASE_URL}/api/application`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(applicationData),
+    });
+
+    return await parseResponse(response, "Failed to submit application");
+  } catch (error) {
+    console.error("Error creating application:", error);
+    throw error;
+  }
+};

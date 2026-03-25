@@ -4,6 +4,12 @@ import ExploreScholarships from "../components/ExploreScholarships";
 import FinancialAid from "../components/FinancialAid";
 import MyApplications from "../components/MyApplications";
 import Profile from "../components/Profile";
+import {
+  getScholarships,
+  getFinancialAid,
+  getApplicationsByStudent,
+  createApplication
+} from "../services/api";
 
 function StudentDashboard() {
   const [active, setActive] = useState("explore");
@@ -11,6 +17,9 @@ function StudentDashboard() {
   const [financialAid, setFinancialAid] = useState([]);
   const [applications, setApplications] = useState([]);
   const [aidApplications, setAidApplications] = useState([]);
+  const [studentId, setStudentId] = useState(null);
+  const [scholarshipsLoading, setScholarshipsLoading] = useState(false);
+  const [scholarshipsError, setScholarshipsError] = useState("");
   const [studentName, setStudentName] = useState("");
   const [studentEmail, setStudentEmail] = useState("");
   const [studentProfile, setStudentProfile] = useState(() => {
@@ -27,19 +36,19 @@ function StudentDashboard() {
   });
   const [searchTerm, setSearchTerm] = useState("");
   const [filterCategory, setFilterCategory] = useState("All");
+  const allApplications = [...applications, ...aidApplications];
 
   useEffect(() => {
-    // Get logged-in user from sessionStorage
     const stored = sessionStorage.getItem("user");
     const user = stored ? JSON.parse(stored) : null;
+
     if (user) {
+      setStudentId(user.id || null);
       setStudentName(user.name || user.email);
       setStudentEmail(user.email);
 
-      // Get or create student profile with registration data
-      let profile = JSON.parse(localStorage.getItem("studentProfile")) || {};
+      const profile = JSON.parse(localStorage.getItem("studentProfile")) || {};
 
-      // Merge registration data with profile if not already set
       if (!profile.fullName && user.name) {
         profile.fullName = user.name;
       }
@@ -53,82 +62,114 @@ function StudentDashboard() {
       localStorage.setItem("studentProfile", JSON.stringify(profile));
       setStudentProfile(profile);
     }
-
-    const savedScholarships = localStorage.getItem("scholarships");
-    if (savedScholarships) {
-      setScholarships(JSON.parse(savedScholarships));
-    }
-
-    const savedFinancialAid = localStorage.getItem("financialAid");
-    if (savedFinancialAid) {
-      setFinancialAid(JSON.parse(savedFinancialAid));
-    }
-
-    const savedApplications = localStorage.getItem("applications");
-    if (savedApplications) {
-      setApplications(JSON.parse(savedApplications));
-    }
-
-    const savedAidApplications = localStorage.getItem("aidApplications");
-    if (savedAidApplications) {
-      setAidApplications(JSON.parse(savedAidApplications));
-    }
   }, []);
 
-  const handleApply = (scholarship, description) => {
-    const alreadyApplied = applications.find(
-      (app) =>
-        app.scholarshipId === scholarship.id &&
-        app.studentName === studentName
-    );
+  useEffect(() => {
+    const fetchStudentData = async () => {
+      try {
+        setScholarshipsLoading(true);
+        setScholarshipsError("");
+
+        const scholarshipResponse = await getScholarships();
+        if (scholarshipResponse.success) {
+          const sortedScholarships = [...(scholarshipResponse.data || [])].sort((a, b) => {
+            const dateA = a.deadline ? new Date(a.deadline).getTime() : Number.MAX_SAFE_INTEGER;
+            const dateB = b.deadline ? new Date(b.deadline).getTime() : Number.MAX_SAFE_INTEGER;
+            return dateA - dateB;
+          });
+          setScholarships(sortedScholarships);
+        } else {
+          setScholarshipsError(scholarshipResponse.message || "Failed to load scholarships");
+        }
+
+        const aidResponse = await getFinancialAid();
+        if (aidResponse.success) {
+          setFinancialAid(aidResponse.data || []);
+        }
+
+        if (studentId) {
+          const applicationsResponse = await getApplicationsByStudent(studentId);
+          if (applicationsResponse.success) {
+            const allApplications = applicationsResponse.data || [];
+            setApplications(allApplications.filter((app) => app.scholarship));
+            setAidApplications(allApplications.filter((app) => app.financialAid));
+          }
+        }
+      } catch (err) {
+        console.error("Error fetching student dashboard data:", err);
+        setScholarshipsError(err.message || "Failed to load scholarships");
+      } finally {
+        setScholarshipsLoading(false);
+      }
+    };
+
+    fetchStudentData();
+  }, [studentId]);
+
+  const handleApply = async (scholarship, description) => {
+    const alreadyApplied = applications.find((app) => app.scholarship?.id === scholarship.id);
 
     if (alreadyApplied) {
       alert("You already applied for this scholarship!");
       return;
     }
 
-    const newApplication = {
-      id: Date.now(),
-      scholarshipId: scholarship.id,
-      scholarshipTitle: scholarship.title,
-      studentName,
-      status: "Pending",
-      appliedDate: new Date().toLocaleDateString(),
-      description: description
-    };
+    if (!studentId) {
+      alert("Student not found. Please login again.");
+      return;
+    }
 
-    const updatedApplications = [...applications, newApplication];
-    setApplications(updatedApplications);
-    localStorage.setItem("applications", JSON.stringify(updatedApplications));
-    alert("✅ Application submitted successfully!");
+    try {
+      const response = await createApplication({
+        student: { id: studentId },
+        scholarship: { id: scholarship.id },
+        description
+      });
+
+      if (!response.success) {
+        alert(response.message || "Failed to submit application");
+        return;
+      }
+
+      setApplications((prev) => [...prev, response.data]);
+      alert(response.message || "Application submitted successfully!");
+    } catch (err) {
+      console.error("Error applying for scholarship:", err);
+      alert(err.message || "Failed to submit application");
+    }
   };
 
-  const handleInterestedAid = (aid, description) => {
-    const alreadyInterested = aidApplications.find(
-      (app) =>
-        app.aidId === aid.id &&
-        app.studentName === studentName
-    );
+  const handleInterestedAid = async (aid, description) => {
+    const alreadyInterested = aidApplications.find((app) => app.financialAid?.id === aid.id);
 
     if (alreadyInterested) {
       alert("You already expressed interest in this financial aid!");
       return;
     }
 
-    const newAidApplication = {
-      id: Date.now(),
-      aidId: aid.id,
-      aidTitle: aid.title,
-      studentName,
-      status: "Pending",
-      appliedDate: new Date().toLocaleDateString(),
-      description: description
-    };
+    if (!studentId) {
+      alert("Student not found. Please login again.");
+      return;
+    }
 
-    const updatedAidApplications = [...aidApplications, newAidApplication];
-    setAidApplications(updatedAidApplications);
-    localStorage.setItem("aidApplications", JSON.stringify(updatedAidApplications));
-    alert("💰 Interest expressed successfully!");
+    try {
+      const response = await createApplication({
+        student: { id: studentId },
+        financialAid: { id: aid.id },
+        description
+      });
+
+      if (!response.success) {
+        alert(response.message || "Failed to submit financial aid application");
+        return;
+      }
+
+      setAidApplications((prev) => [...prev, response.data]);
+      alert(response.message || "Interest expressed successfully!");
+    } catch (err) {
+      console.error("Error applying for financial aid:", err);
+      alert(err.message || "Failed to submit financial aid application");
+    }
   };
 
   const renderActiveComponent = () => {
@@ -138,12 +179,13 @@ function StudentDashboard() {
           <ExploreScholarships
             scholarships={scholarships}
             applications={applications}
-            studentName={studentName}
             searchTerm={searchTerm}
             setSearchTerm={setSearchTerm}
             filterCategory={filterCategory}
             setFilterCategory={setFilterCategory}
             handleApply={handleApply}
+            scholarshipsLoading={scholarshipsLoading}
+            scholarshipsError={scholarshipsError}
           />
         );
       case "financial-aid":
@@ -158,7 +200,7 @@ function StudentDashboard() {
       case "applications":
         return (
           <MyApplications
-            applications={applications}
+            applications={allApplications}
             studentName={studentName}
           />
         );
@@ -168,7 +210,7 @@ function StudentDashboard() {
             studentProfile={studentProfile}
             setStudentProfile={setStudentProfile}
             studentEmail={studentEmail}
-            applications={applications}
+            applications={allApplications}
             scholarships={scholarships}
             setActive={setActive}
           />

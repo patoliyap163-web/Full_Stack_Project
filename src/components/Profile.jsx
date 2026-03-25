@@ -15,13 +15,11 @@ const Profile = ({
     setEditData(studentProfile);
   }, [studentProfile]);
 
-  const myApplications = applications.filter(
-    (app) => app.studentName === studentProfile.fullName
-  );
+  const myApplications = applications || [];
 
-  const getApprovedCount = () => myApplications.filter(a => a.status === "Approved").length;
-  const getPendingCount = () => myApplications.filter(a => a.status === "Pending").length;
-  const getRejectedCount = () => myApplications.filter(a => a.status === "Rejected").length;
+  const getApprovedCount = () => myApplications.filter(a => a.status === "APPROVED").length;
+  const getPendingCount = () => myApplications.filter(a => a.status === "PENDING").length;
+  const getRejectedCount = () => myApplications.filter(a => a.status === "REJECTED").length;
 
   const updateProfile = () => {
     const updatedProfile = {

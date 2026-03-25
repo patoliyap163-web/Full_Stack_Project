@@ -1,14 +1,12 @@
-import React, { useState } from 'react';
+import React, { useState } from "react";
 
-const FinancialAid = ({ financialAid, handleInterestedAid, aidApplications, studentName }) => {
+const FinancialAid = ({ financialAid, handleInterestedAid, aidApplications }) => {
   const [showModal, setShowModal] = useState(false);
   const [selectedAid, setSelectedAid] = useState(null);
-  const [description, setDescription] = useState('');
+  const [description, setDescription] = useState("");
 
   const getAidStatus = (aidId) => {
-    const app = aidApplications.find(
-      (a) => a.aidId === aidId && a.studentName === studentName
-    );
+    const app = aidApplications.find((a) => a.financialAid?.id === aidId);
     return app ? app.status : null;
   };
 
@@ -17,46 +15,49 @@ const FinancialAid = ({ financialAid, handleInterestedAid, aidApplications, stud
     setShowModal(true);
   };
 
-  const handleSubmitInterest = () => {
-    if (description.trim()) {
-      handleInterestedAid(selectedAid, description);
-      setShowModal(false);
-      setDescription('');
-      setSelectedAid(null);
-    } else {
-      alert('Description is required');
+  const handleSubmitInterest = async () => {
+    if (!description.trim()) {
+      alert("Description is required");
+      return;
     }
+
+    await handleInterestedAid(selectedAid, description);
+    setShowModal(false);
+    setDescription("");
+    setSelectedAid(null);
   };
 
   const handleCloseModal = () => {
     setShowModal(false);
-    setDescription('');
+    setDescription("");
     setSelectedAid(null);
   };
 
   return (
     <>
       <div style={styles.headerSection}>
-        <h1 style={{margin: 0, fontSize: "32px", fontWeight: "700"}}>💰 Financial Aid Programs</h1>
-        <p style={{margin: "5px 0 0 0", color: "#666", fontSize: "14px"}}>Explore loans, grants, and work-study opportunities</p>
+        <h1 style={{ margin: 0, fontSize: "32px", fontWeight: "700" }}>Financial Aid Programs</h1>
+        <p style={{ margin: "5px 0 0 0", color: "#666", fontSize: "14px" }}>
+          Explore loans, grants, and work-study opportunities
+        </p>
       </div>
 
       {financialAid.length === 0 ? (
         <div style={styles.emptyState}>
-          <p style={{fontSize: "18px", color: "#666"}}>No financial aid programs available yet</p>
+          <p style={{ fontSize: "18px", color: "#666" }}>No financial aid programs available yet</p>
         </div>
       ) : (
         <div style={styles.aidGrid}>
           {financialAid.map((aid) => (
             <div key={aid.id} style={styles.aidCard}>
               <div style={styles.aidCardHeader}>
-                <h3 style={{margin: "0 0 8px 0"}}>{aid.title}</h3>
+                <h3 style={{ margin: "0 0 8px 0" }}>{aid.title}</h3>
                 <span style={styles.typeBadge}>{aid.type}</span>
               </div>
 
               <div style={styles.aidAmountBox}>
                 <span>Max Amount: </span>
-                <span style={{fontSize: "24px", fontWeight: "700", color: "#8b5cf6"}}>${aid.amount}</span>
+                <span style={{ fontSize: "24px", fontWeight: "700", color: "#8b5cf6" }}>${aid.amount}</span>
               </div>
 
               {aid.interestRate && (
@@ -66,46 +67,48 @@ const FinancialAid = ({ financialAid, handleInterestedAid, aidApplications, stud
               )}
 
               {aid.type === "Loan" && (
-                <div style={{...styles.aidInfo, background: "#fef3c7", padding: "8px", borderRadius: "4px"}}>
-                  💡 This is a loan with repayment terms
+                <div style={{ ...styles.aidInfo, background: "#fef3c7", padding: "8px", borderRadius: "4px" }}>
+                  This is a loan with repayment terms
                 </div>
               )}
 
               {aid.description && (
                 <div style={styles.aidInfo}>
                   <strong>Details:</strong>
-                  <p style={{margin: "8px 0 0 0", fontSize: "13px"}}>{aid.description}</p>
+                  <p style={{ margin: "8px 0 0 0", fontSize: "13px" }}>{aid.description}</p>
                 </div>
               )}
 
               {aid.requirements && (
                 <div style={styles.aidInfo}>
                   <strong>Requirements:</strong>
-                  <p style={{margin: "8px 0 0 0", fontSize: "13px"}}>{aid.requirements}</p>
+                  <p style={{ margin: "8px 0 0 0", fontSize: "13px" }}>{aid.requirements}</p>
                 </div>
               )}
 
               {(() => {
                 const status = getAidStatus(aid.id);
                 return status ? (
-                  <div style={{
-                    padding: "10px 15px",
-                    background: status === "Approved" ? "#d1fae5" : status === "Pending" ? "#fef3c7" : "#fee2e2",
-                    borderRadius: "6px",
-                    color: status === "Approved" ? "#065f46" : status === "Pending" ? "#92400e" : "#991b1b",
-                    fontWeight: "600",
-                    fontSize: "13px",
-                    marginTop: "15px",
-                    textAlign: "center"
-                  }}>
-                    ✓ Interest Expressed: {status}
+                  <div
+                    style={{
+                      padding: "10px 15px",
+                      background: status === "APPROVED" ? "#d1fae5" : status === "PENDING" ? "#fef3c7" : "#fee2e2",
+                      borderRadius: "6px",
+                      color: status === "APPROVED" ? "#065f46" : status === "PENDING" ? "#92400e" : "#991b1b",
+                      fontWeight: "600",
+                      fontSize: "13px",
+                      marginTop: "15px",
+                      textAlign: "center"
+                    }}
+                  >
+                    Interest Expressed: {status}
                   </div>
                 ) : (
                   <button
                     style={styles.interestedBtn}
                     onClick={() => handleInterestedClick(aid)}
                   >
-                    ⭐ I'm Interested
+                    I'm Interested
                   </button>
                 );
               })()}
