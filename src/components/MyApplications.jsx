@@ -51,6 +51,9 @@ const MyApplications = ({ applications, studentName }) => {
                 <div>
                   <h3 style={{margin: "0 0 5px 0"}}>{app.scholarshipTitle}</h3>
                   <p style={{margin: 0, color: "#666", fontSize: "13px"}}>Applied on {app.appliedDate}</p>
+                  {app.description && (
+                    <p style={{margin: "5px 0 0 0", color: "#64748b", fontSize: "13px"}}>Description: {app.description}</p>
+                  )}
                 </div>
                 <span style={{
                   padding: "8px 16px",

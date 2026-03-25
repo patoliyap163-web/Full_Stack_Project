@@ -10,6 +10,7 @@ function StudentDashboard() {
   const [scholarships, setScholarships] = useState([]);
   const [financialAid, setFinancialAid] = useState([]);
   const [applications, setApplications] = useState([]);
+  const [aidApplications, setAidApplications] = useState([]);
   const [studentName, setStudentName] = useState("");
   const [studentEmail, setStudentEmail] = useState("");
   const [studentProfile, setStudentProfile] = useState(() => {
@@ -66,9 +67,14 @@ function StudentDashboard() {
     if (savedApplications) {
       setApplications(JSON.parse(savedApplications));
     }
+
+    const savedAidApplications = localStorage.getItem("aidApplications");
+    if (savedAidApplications) {
+      setAidApplications(JSON.parse(savedAidApplications));
+    }
   }, []);
 
-  const handleApply = (scholarship) => {
+  const handleApply = (scholarship, description) => {
     const alreadyApplied = applications.find(
       (app) =>
         app.scholarshipId === scholarship.id &&
@@ -86,7 +92,8 @@ function StudentDashboard() {
       scholarshipTitle: scholarship.title,
       studentName,
       status: "Pending",
-      appliedDate: new Date().toLocaleDateString()
+      appliedDate: new Date().toLocaleDateString(),
+      description: description
     };
 
     const updatedApplications = [...applications, newApplication];
@@ -95,8 +102,32 @@ function StudentDashboard() {
     alert("✅ Application submitted successfully!");
   };
 
-  const handleInterestedAid = (aid) => {
-    alert(`💰 You're interested in ${aid.title}. Check back soon for application details!`);
+  const handleInterestedAid = (aid, description) => {
+    const alreadyInterested = aidApplications.find(
+      (app) =>
+        app.aidId === aid.id &&
+        app.studentName === studentName
+    );
+
+    if (alreadyInterested) {
+      alert("You already expressed interest in this financial aid!");
+      return;
+    }
+
+    const newAidApplication = {
+      id: Date.now(),
+      aidId: aid.id,
+      aidTitle: aid.title,
+      studentName,
+      status: "Pending",
+      appliedDate: new Date().toLocaleDateString(),
+      description: description
+    };
+
+    const updatedAidApplications = [...aidApplications, newAidApplication];
+    setAidApplications(updatedAidApplications);
+    localStorage.setItem("aidApplications", JSON.stringify(updatedAidApplications));
+    alert("💰 Interest expressed successfully!");
   };
 
   const renderActiveComponent = () => {
@@ -119,6 +150,8 @@ function StudentDashboard() {
           <FinancialAid
             financialAid={financialAid}
             handleInterestedAid={handleInterestedAid}
+            aidApplications={aidApplications}
+            studentName={studentName}
           />
         );
       case "applications":

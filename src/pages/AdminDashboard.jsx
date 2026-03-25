@@ -1,24 +1,17 @@
 import { useState, useEffect } from "react";
-import {
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  Tooltip,
-  CartesianGrid,
-  PieChart,
-  Pie,
-  Cell,
-  Legend,
-  ResponsiveContainer,
-  LineChart,
-  Line
-} from "recharts";
-
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import * as XLSX from "xlsx";
 import { saveAs } from "file-saver";
+
+// Import decoupled components
+import DashboardOverview from "../components/admin/DashboardOverview";
+import ScholarshipsManagement from "../components/admin/ScholarshipsManagement";
+import FinancialAidManagement from "../components/admin/FinancialAidManagement";
+import ApplicationsManagement from "../components/admin/ApplicationsManagement";
+import AidApplicationsManagement from "../components/admin/AidApplicationsManagement";
+import Analytics from "../components/admin/Analytics";
+import AdminProfile from "../components/admin/AdminProfile";
 
 function AdminDashboard() {
   const [active, setActive] = useState("dashboard");
@@ -31,9 +24,6 @@ function AdminDashboard() {
     department: "Finance & Scholarships",
     profileImage: "👨‍💼"
   });
-
-  const [editingProfile, setEditingProfile] = useState(false);
-  const [profileData, setProfileData] = useState(adminProfile);
 
   // Initialize profile from localStorage or logged-in user
   useEffect(() => {
@@ -59,7 +49,6 @@ function AdminDashboard() {
       // Save to localStorage to persist
       localStorage.setItem("adminProfile", JSON.stringify(profile));
       setAdminProfile(profile);
-      setProfileData(profile);
     }
   }, []);
 
@@ -88,6 +77,11 @@ function AdminDashboard() {
     return saved ? JSON.parse(saved) : [];
   });
 
+  const [aidApplications, setAidApplications] = useState(() => {
+    const saved = localStorage.getItem("aidApplications");
+    return saved ? JSON.parse(saved) : [];
+  });
+
   const [formData, setFormData] = useState({
     title: "",
     amount: "",
@@ -105,7 +99,11 @@ function AdminDashboard() {
   const [searchTerm, setSearchTerm] = useState("");
   const [filterStatus, setFilterStatus] = useState("All");
 
+  const [aidSearchTerm, setAidSearchTerm] = useState("");
+  const [aidFilterStatus, setAidFilterStatus] = useState("All");
+
   const [currentPage, setCurrentPage] = useState(1);
+  const [aidCurrentPage, setAidCurrentPage] = useState(1);
   const itemsPerPage = 5;
 
   // Sync localStorage when data changes
@@ -118,6 +116,10 @@ function AdminDashboard() {
   }, [applications]);
 
   useEffect(() => {
+    localStorage.setItem("aidApplications", JSON.stringify(aidApplications));
+  }, [aidApplications]);
+
+  useEffect(() => {
     localStorage.setItem("financialAid", JSON.stringify(financialAid));
   }, [financialAid]);
 
@@ -125,18 +127,14 @@ function AdminDashboard() {
     localStorage.setItem("adminProfile", JSON.stringify(adminProfile));
   }, [adminProfile]);
 
-  // Keep profileData in sync when editing
-  useEffect(() => {
-    setProfileData(adminProfile);
-  }, [adminProfile]);
 
-  const updateAdminProfile = () => {
+
+  const updateAdminProfile = (newProfileData) => {
     const updatedProfile = {
-      ...profileData,
-      email: adminEmail || profileData.email // Keep email synchronized
+      ...newProfileData,
+      email: adminEmail || newProfileData.email // Keep email synchronized
     };
     setAdminProfile(updatedProfile);
-    setEditingProfile(false);
   };
 
   const handleAidFormChange = (e) => {
@@ -235,6 +233,13 @@ function AdminDashboard() {
     setApplications(updated);
   };
 
+  const updateAidApplicationStatus = (id, status) => {
+    const updated = aidApplications.map((app) =>
+      app.id === id ? { ...app, status } : app
+    );
+    setAidApplications(updated);
+  };
+
   // ===== Filter Logic =====
   const filteredApplications = applications.filter((app) => {
     const matchesSearch = (app.studentName || "")
@@ -247,6 +252,17 @@ function AdminDashboard() {
     return matchesSearch && matchesStatus;
   });
 
+  const filteredAidApplications = aidApplications.filter((app) => {
+    const matchesSearch = (app.studentName || "")
+      .toLowerCase()
+      .includes(aidSearchTerm.toLowerCase());
+
+    const matchesStatus =
+      aidFilterStatus === "All" || app.status === aidFilterStatus;
+
+    return matchesSearch && matchesStatus;
+  });
+
   // ===== Pagination =====
   const indexOfLast = currentPage * itemsPerPage;
   const indexOfFirst = indexOfLast - itemsPerPage;
@@ -255,7 +271,15 @@ function AdminDashboard() {
     indexOfLast
   );
 
+  const aidIndexOfLast = aidCurrentPage * itemsPerPage;
+  const aidIndexOfFirst = aidIndexOfLast - itemsPerPage;
+  const currentAidApplications = filteredAidApplications.slice(
+    aidIndexOfFirst,
+    aidIndexOfLast
+  );
+
   const totalPages = Math.ceil(filteredApplications.length / itemsPerPage);
+  const aidTotalPages = Math.ceil(filteredAidApplications.length / itemsPerPage);
 
   // ===== Export PDF =====
   const exportToPDF = () => {
@@ -309,34 +333,17 @@ function AdminDashboard() {
     }
   });
 
-  const overallPieData = [
-    { name: "Pending", value: overallStatusCounts.Pending },
-    { name: "Approved", value: overallStatusCounts.Approved },
-    { name: "Rejected", value: overallStatusCounts.Rejected }
-  ];
+  const aidStatusCounts = {
+    Pending: 0,
+    Approved: 0,
+    Rejected: 0
+  };
 
-  const scholarshipWiseData = scholarships.map((sch) => {
-    const counts = { Pending: 0, Approved: 0, Rejected: 0 };
-
-    applications.forEach((app) => {
-      if (app.scholarshipTitle === sch.title) {
-        counts[app.status]++;
-      }
-    });
-
-    return { scholarship: sch.title, ...counts };
+  aidApplications.forEach((app) => {
+    if (aidStatusCounts[app.status] !== undefined) {
+      aidStatusCounts[app.status]++;
+    }
   });
-
-  // ===== Applications Over Time =====
-  const groupedByDate = {};
-  applications.forEach((app) => {
-    const date = new Date(app.id).toLocaleDateString();
-    groupedByDate[date] = (groupedByDate[date] || 0) + 1;
-  });
-  const lineData = Object.keys(groupedByDate).map((date) => ({
-    date,
-    applications: groupedByDate[date]
-  }));
 
   return (
     <div style={styles.container}>
@@ -348,7 +355,7 @@ function AdminDashboard() {
 
         <div style={styles.menuDivider}></div>
 
-        {["dashboard", "scholarships", "financial-aid", "applications", "analytics", "profile"].map(
+        {["dashboard", "scholarships", "financial-aid", "applications", "aid-applications", "analytics", "profile"].map(
           (item) => (
             <div
               key={item}
@@ -360,10 +367,13 @@ function AdminDashboard() {
                 {item === "scholarships" && "📚"}
                 {item === "financial-aid" && "💰"}
                 {item === "applications" && "📋"}
+                {item === "aid-applications" && "💳"}
                 {item === "analytics" && "📈"}
                 {item === "profile" && "👤"}
               </span>
-              {item === "financial-aid" ? "Financial Aid" : item.charAt(0).toUpperCase() + item.slice(1).replace("-", " ")}
+              {item === "financial-aid" ? "Financial Aid" : 
+               item === "aid-applications" ? "Aid Applications" :
+               item.charAt(0).toUpperCase() + item.slice(1).replace("-", " ")}
             </div>
           )
         )}
@@ -372,763 +382,91 @@ function AdminDashboard() {
       <div style={styles.main}>
         {/* DASHBOARD */}
         {active === "dashboard" && (
-          <>
-            <div style={styles.headerSection}>
-              <h1 style={{margin: 0, fontSize: "32px", fontWeight: "700"}}>Dashboard</h1>
-              <p style={{margin: "5px 0 0 0", color: "#666", fontSize: "14px"}}>Welcome back, Admin</p>
-            </div>
-
-            <div style={styles.statsGrid}>
-              <div style={styles.statCard}>
-                <div style={styles.statIcon}>📚</div>
-                <div style={styles.statContent}>
-                  <p style={styles.statLabel}>Total Scholarships</p>
-                  <p style={styles.statValue}>{scholarships.length}</p>
-                </div>
-                <div style={styles.statTrend}>↑ Active</div>
-              </div>
-
-              <div style={styles.statCard}>
-                <div style={styles.statIcon}>💰</div>
-                <div style={styles.statContent}>
-                  <p style={styles.statLabel}>Financial Aid</p>
-                  <p style={styles.statValue}>{financialAid.length}</p>
-                </div>
-                <div style={styles.statTrend}>Programs</div>
-              </div>
-
-              <div style={styles.statCard}>
-                <div style={styles.statIcon}>📋</div>
-                <div style={styles.statContent}>
-                  <p style={styles.statLabel}>Applications</p>
-                  <p style={styles.statValue}>{applications.length}</p>
-                </div>
-                <div style={styles.statTrend}>↑ Growing</div>
-              </div>
-
-              <div style={styles.statCard}>
-                <div style={styles.statIcon}>✅</div>
-                <div style={styles.statContent}>
-                  <p style={styles.statLabel}>Approved</p>
-                  <p style={styles.statValue}>{overallStatusCounts.Approved}</p>
-                </div>
-                <div style={styles.statTrend}>Success</div>
-              </div>
-
-              <div style={styles.statCard}>
-                <div style={styles.statIcon}>⏳</div>
-                <div style={styles.statContent}>
-                  <p style={styles.statLabel}>Pending</p>
-                  <p style={styles.statValue}>{overallStatusCounts.Pending}</p>
-                </div>
-                <div style={styles.statTrend}>Review</div>
-              </div>
-
-              <div style={styles.statCard}>
-                <div style={styles.statIcon}>❌</div>
-                <div style={styles.statContent}>
-                  <p style={styles.statLabel}>Rejected</p>
-                  <p style={styles.statValue}>{overallStatusCounts.Rejected}</p>
-                </div>
-                <div style={styles.statTrend}>Processed</div>
-              </div>
-            </div>
-
-            <div style={styles.quickActions}>
-              <h3>Quick Actions</h3>
-              <div style={styles.actionsGrid}>
-                <button style={styles.actionBtn} onClick={() => setActive("scholarships")}>
-                  ➕ Add Scholarship
-                </button>
-                <button style={styles.actionBtn} onClick={() => setActive("financial-aid")}>
-                  💰 Add Financial Aid
-                </button>
-                <button style={styles.actionBtn} onClick={() => setActive("applications")}>
-                  📋 View Applications
-                </button>
-                <button style={styles.actionBtn} onClick={() => setActive("analytics")}>
-                  📊 Analytics
-                </button>
-                <button style={styles.actionBtn} onClick={() => setActive("profile")}>
-                  👤 My Profile
-                </button>
-              </div>
-            </div>
-          </>
+          <DashboardOverview
+            scholarships={scholarships}
+            financialAid={financialAid}
+            applications={applications}
+            aidApplications={aidApplications}
+            overallStatusCounts={overallStatusCounts}
+            setActive={setActive}
+          />
         )}
 
         {/* SCHOLARSHIPS */}
         {active === "scholarships" && (
-          <>
-            <div style={styles.headerSection}>
-              <h1 style={{margin: 0, fontSize: "32px", fontWeight: "700"}}>📚 Manage Scholarships</h1>
-              <p style={{margin: "5px 0 0 0", color: "#666", fontSize: "14px"}}>Create and manage scholarship programs</p>
-            </div>
-
-            <div style={styles.formContainer}>
-              <h2 style={{marginTop: 0}}>{editId ? "✏️ Edit Scholarship" : "➕ Add New Scholarship"}</h2>
-              <form onSubmit={handleSubmit} style={styles.scholarshipForm}>
-                <div style={styles.formRow}>
-                  <div style={styles.formGroup}>
-                    <label style={styles.label}>Scholarship Title *</label>
-                    <input
-                      name="title"
-                      placeholder="e.g., Merit Excellence Award"
-                      value={formData.title}
-                      onChange={handleChange}
-                      style={styles.input}
-                    />
-                  </div>
-                  <div style={styles.formGroup}>
-                    <label style={styles.label}>Category</label>
-                    <select
-                      name="category"
-                      value={formData.category}
-                      onChange={handleChange}
-                      style={styles.input}
-                    >
-                      <option value="">-- Select Category --</option>
-                      <option value="Merit-based">Merit-based</option>
-                      <option value="Need-based">Need-based</option>
-                      <option value="Other">Other</option>
-                    </select>
-                  </div>
-                </div>
-                <div style={styles.formRow}>
-                  <div style={styles.formGroup}>
-                    <label style={styles.label}>Amount ($) *</label>
-                    <input
-                      name="amount"
-                      placeholder="e.g., 5000"
-                      value={formData.amount}
-                      onChange={handleChange}
-                      style={styles.input}
-                    />
-                  </div>
-                  <div style={styles.formGroup}>
-                    <label style={styles.label}>Minimum GPA</label>
-                    <input
-                      name="gpa"
-                      placeholder="e.g., 3.5"
-                      value={formData.gpa}
-                      onChange={handleChange}
-                      style={styles.input}
-                    />
-                  </div>
-                </div>
-                <div style={styles.formGroup}>
-                  <label style={styles.label}>Deadline *</label>
-                  <input
-                    name="deadline"
-                    type="date"
-                    value={formData.deadline}
-                    onChange={handleChange}
-                    style={styles.input}
-                  />
-                </div>
-                <div style={styles.formGroup}>
-                  <label style={styles.label}>Description *</label>
-                  <textarea
-                    name="description"
-                    placeholder="Detailed scholarship description..."
-                    value={formData.description}
-                    onChange={handleChange}
-                    style={{...styles.input, minHeight: "100px", fontFamily: "Arial", resize: "vertical"}}
-                  />
-                </div>
-                <div style={styles.formGroup}>
-                  <label style={styles.label}>Eligibility Criteria *</label>
-                  <textarea
-                    name="eligibility"
-                    placeholder="List all eligibility requirements..."
-                    value={formData.eligibility}
-                    onChange={handleChange}
-                    style={{...styles.input, minHeight: "100px", fontFamily: "Arial", resize: "vertical"}}
-                  />
-                </div>
-                <div style={styles.formGroup}>
-                  <label style={styles.label}>Benefits</label>
-                  <textarea
-                    name="benefits"
-                    placeholder="Benefits offered to the student (stipend, mentorship, internship, etc.)"
-                    value={formData.benefits}
-                    onChange={handleChange}
-                    style={{...styles.input, minHeight: "100px", fontFamily: "Arial", resize: "vertical"}}
-                  />
-                </div>
-
-                <div style={styles.formGroup}>
-                  <label style={styles.label}>Requirements</label>
-                  <textarea
-                    name="requirements"
-                    placeholder="Student requirements (eligibility, documents, GPA, repayment terms, etc.)"
-                    value={formData.requirements}
-                    onChange={handleChange}
-                    style={{...styles.input, minHeight: "100px", fontFamily: "Arial", resize: "vertical"}}
-                  />
-                </div>
-                <button type="submit" style={styles.submitBtn}>
-                  {editId ? "💾 Update Scholarship" : "➕ Create Scholarship"}
-                </button>
-              </form>
-            </div>
-
-            <h2 style={{marginTop: "50px", marginBottom: "20px", fontSize: "24px"}}>Active Scholarships ({scholarships.length})</h2>
-            <div style={styles.scholarshipsGrid}>
-              {scholarships.map((item) => (
-                <div key={item.id} style={styles.scholarshipCard}>
-                  <div style={styles.cardHeader}>
-                    <div>
-                      <h3 style={{margin: "0 0 8px 0"}}>{item.title}</h3>
-                      <span style={styles.categoryBadge}>{item.category || "Scholarship"}</span>
-                    </div>
-                  </div>
-                  
-                  <div style={styles.amountBox}>
-                    <span style={styles.currencySymbol}>$</span>
-                    <span style={styles.amountValue}>{item.amount}</span>
-                  </div>
-
-                  {item.description && (
-                    <div style={styles.cardSection}>
-                      <h4 style={styles.sectionTitle}>📝 Description</h4>
-                      <p style={styles.cardText}>{item.description}</p>
-                    </div>
-                  )}
-
-                  {item.eligibility && (
-                    <div style={styles.cardSection}>
-                      <h4 style={styles.sectionTitle}>✓ Eligibility</h4>
-                      <p style={styles.cardText}>{item.eligibility}</p>
-                    </div>
-                  )}
-
-                  {item.gpa && (
-                    <div style={styles.cardSection}>
-                      <h4 style={styles.sectionTitle}>📊 Min GPA: <strong>{item.gpa}</strong></h4>
-                    </div>
-                  )}
-
-                  {item.benefits && (
-                    <div style={styles.cardSection}>
-                      <h4 style={styles.sectionTitle}>🎁 Benefits</h4>
-                      <p style={styles.cardText}>{item.benefits}</p>
-                    </div>
-                  )}
-
-                  {item.requirements && (
-                    <div style={styles.cardSection}>
-                      <h4 style={styles.sectionTitle}>📋 Requirements</h4>
-                      <p style={styles.cardText}>{item.requirements}</p>
-                    </div>
-                  )}
-
-                  <div style={styles.deadlineSection}>
-                    <span>📅 Deadline: <strong>{item.deadline}</strong></span>
-                  </div>
-
-                  <div style={styles.cardActions}>
-                    <button style={styles.editBtn} onClick={() => handleEdit(item)}>
-                      ✏️ Edit
-                    </button>
-                    <button style={styles.deleteBtn} onClick={() => handleDelete(item.id)}>
-                      🗑️ Delete
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </>
+          <ScholarshipsManagement
+            scholarships={scholarships}
+            formData={formData}
+            editId={editId}
+            handleChange={handleChange}
+            handleSubmit={handleSubmit}
+            handleEdit={handleEdit}
+            handleDelete={handleDelete}
+          />
         )}
 
         {/* APPLICATIONS */}
         {active === "applications" && (
-          <>
-            <div style={styles.headerSection}>
-              <h1 style={{margin: 0, fontSize: "32px", fontWeight: "700"}}>📋 Student Applications</h1>
-              <p style={{margin: "5px 0 0 0", color: "#666", fontSize: "14px"}}>Total: {applications.length} applications</p>
-            </div>
+          <ApplicationsManagement
+            applications={applications}
+            searchTerm={searchTerm}
+            setSearchTerm={setSearchTerm}
+            filterStatus={filterStatus}
+            setFilterStatus={setFilterStatus}
+            updateApplicationStatus={updateApplicationStatus}
+            currentApplications={currentApplications}
+            totalPages={totalPages}
+            currentPage={currentPage}
+            setCurrentPage={setCurrentPage}
+            exportToPDF={exportToPDF}
+            exportToExcel={exportToExcel}
+          />
+        )}
 
-            <div style={styles.filterSection}>
-              <input
-                type="text"
-                placeholder="🔍 Search by student name..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                style={styles.searchInput}
-              />
-
-              <select
-                value={filterStatus}
-                onChange={(e) => setFilterStatus(e.target.value)}
-                style={styles.filterSelect}
-              >
-                <option>All</option>
-                <option>Pending</option>
-                <option>Approved</option>
-                <option>Rejected</option>
-              </select>
-
-              <button style={styles.exportBtn} onClick={exportToPDF}>
-                📄 Export PDF
-              </button>
-
-              <button style={styles.exportBtn} onClick={exportToExcel}>
-                📊 Export Excel
-              </button>
-            </div>
-
-            <div style={styles.applicationsContainer}>
-              {currentApplications.length > 0 ? (
-                currentApplications.map((app) => (
-                  <div key={app.id} style={styles.applicationCard}>
-                    <div style={styles.appHeader}>
-                      <div>
-                        <h3 style={{margin: "0 0 5px 0", fontSize: "18px"}}>{app.studentName}</h3>
-                        <p style={{margin: 0, color: "#666", fontSize: "13px"}}>{app.scholarshipTitle}</p>
-                      </div>
-                      <span style={{
-                        padding: "6px 12px",
-                        borderRadius: "20px",
-                        fontWeight: "600",
-                        fontSize: "12px",
-                        background: app.status === "Approved" ? "#d1fae5" : app.status === "Pending" ? "#fef3c7" : "#fee2e2",
-                        color: app.status === "Approved" ? "#065f46" : app.status === "Pending" ? "#92400e" : "#991b1b"
-                      }}>
-                        {app.status}
-                      </span>
-                    </div>
-
-                    {app.status === "Pending" && (
-                      <div style={styles.appActions}>
-                        <button
-                          style={styles.approveBtnSmall}
-                          onClick={() => updateApplicationStatus(app.id, "Approved")}
-                        >
-                          ✓ Approve
-                        </button>
-                        <button
-                          style={styles.rejectBtnSmall}
-                          onClick={() => updateApplicationStatus(app.id, "Rejected")}
-                        >
-                          ✕ Reject
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                ))
-              ) : (
-                <div style={styles.emptyState}>
-                  <p style={{fontSize: "16px", color: "#666"}}>No applications found</p>
-                </div>
-              )}
-            </div>
-
-            {totalPages > 1 && (
-              <div style={styles.pagination}>
-                {Array.from({ length: totalPages }, (_, index) => (
-                  <button
-                    key={index}
-                    onClick={() => setCurrentPage(index + 1)}
-                    style={{
-                      ...styles.pageBtn,
-                      ...(currentPage === index + 1 ? styles.pagebtnActive : {})
-                    }}
-                  >
-                    {index + 1}
-                  </button>
-                ))}
-              </div>
-            )}
-          </>
+        {/* AID APPLICATIONS */}
+        {active === "aid-applications" && (
+          <AidApplicationsManagement
+            aidApplications={aidApplications}
+            aidSearchTerm={aidSearchTerm}
+            setAidSearchTerm={setAidSearchTerm}
+            aidFilterStatus={aidFilterStatus}
+            setAidFilterStatus={setAidFilterStatus}
+            updateAidApplicationStatus={updateAidApplicationStatus}
+            currentAidApplications={currentAidApplications}
+            aidTotalPages={aidTotalPages}
+            aidCurrentPage={aidCurrentPage}
+            setAidCurrentPage={setAidCurrentPage}
+          />
         )}
 
         {/* FINANCIAL AID */}
         {active === "financial-aid" && (
-          <>
-            <div style={styles.headerSection}>
-              <h1 style={{margin: 0, fontSize: "32px", fontWeight: "700"}}>💰 Financial Aid Management</h1>
-              <p style={{margin: "5px 0 0 0", color: "#666", fontSize: "14px"}}>Manage financial aid opportunities and loans</p>
-            </div>
-
-            <div style={styles.formContainer}>
-              <h2 style={{marginTop: 0}}>➕ Add Financial Aid</h2>
-              <form onSubmit={addFinancialAid} style={styles.scholarshipForm}>
-                <div style={styles.formRow}>
-                  <div style={styles.formGroup}>
-                    <label style={styles.label}>Aid Name *</label>
-                    <input
-                      name="title"
-                      placeholder="e.g., Federal Student Loan"
-                      value={aidFormData.title}
-                      onChange={handleAidFormChange}
-                      style={styles.input}
-                    />
-                  </div>
-                  <div style={styles.formGroup}>
-                    <label style={styles.label}>Type</label>
-                    <select
-                      name="type"
-                      value={aidFormData.type}
-                      onChange={handleAidFormChange}
-                      style={styles.input}
-                    >
-                      <option>Loan</option>
-                      <option>Grant</option>
-                      <option>Work-Study</option>
-                      <option>Other</option>
-                    </select>
-                  </div>
-                </div>
-                <div style={styles.formRow}>
-                  <div style={styles.formGroup}>
-                    <label style={styles.label}>Maximum Amount ($) *</label>
-                    <input
-                      name="amount"
-                      placeholder="e.g., 10000"
-                      value={aidFormData.amount}
-                      onChange={handleAidFormChange}
-                      style={styles.input}
-                    />
-                  </div>
-                  <div style={styles.formGroup}>
-                    <label style={styles.label}>Interest Rate (%) {aidFormData.type === "Loan" && "*"}</label>
-                    <input
-                      name="interestRate"
-                      placeholder="e.g., 4.5"
-                      value={aidFormData.interestRate}
-                      onChange={handleAidFormChange}
-                      style={styles.input}
-                    />
-                  </div>
-                </div>
-                <div style={styles.formGroup}>
-                  <label style={styles.label}>Application Deadline</label>
-                  <input
-                    name="deadline"
-                    type="date"
-                    value={aidFormData.deadline}
-                    onChange={handleAidFormChange}
-                    style={styles.input}
-                  />
-                </div>
-                <div style={styles.formGroup}>
-                  <label style={styles.label}>Description</label>
-                  <textarea
-                    name="description"
-                    placeholder="Detailed description of the financial aid..."
-                    value={aidFormData.description}
-                    onChange={handleAidFormChange}
-                    style={{...styles.input, minHeight: "80px", resize: "vertical"}}
-                  />
-                </div>
-                <div style={styles.formGroup}>
-                  <label style={styles.label}>Requirements</label>
-                  <textarea
-                    name="requirements"
-                    placeholder="Eligibility and repayment requirements..."
-                    value={aidFormData.requirements}
-                    onChange={handleAidFormChange}
-                    style={{...styles.input, minHeight: "80px", resize: "vertical"}}
-                  />
-                </div>
-                <button type="submit" style={styles.submitBtn}>
-                  {aidEditId ? "💾 Save Changes" : "💰 Add Financial Aid"}
-                </button>
-              </form>
-            </div>
-
-            <h2 style={{marginTop: "40px", marginBottom: "20px", fontSize: "24px"}}>Available Aid Programs ({financialAid.length})</h2>
-            <div style={styles.scholarshipsGrid}>
-              {financialAid.map((aid) => (
-                <div key={aid.id} style={styles.aidCard}>
-                  <div style={styles.aidCardHeader}>
-                    <h3 style={{margin: 0}}>{aid.title}</h3>
-                    <span style={styles.aidTypeBadge}>{aid.type}</span>
-                  </div>
-
-                  <div style={styles.aidAmountBox}>
-                    <span>Max: </span>
-                    <span style={styles.aidAmount}>${aid.amount}</span>
-                  </div>
-
-                  {aid.interestRate && (
-                    <div style={styles.aidInfo}>
-                      <strong>Interest Rate:</strong> {aid.interestRate}%
-                    </div>
-                  )}
-
-                  {aid.deadline && (
-                    <div style={styles.aidInfo}>
-                      📅 Deadline: {aid.deadline}
-                    </div>
-                  )}
-
-                  {aid.description && (
-                    <div style={styles.aidInfo}>
-                      <strong>Details:</strong> {aid.description}
-                    </div>
-                  )}
-
-                  {aid.requirements && (
-                    <div style={styles.aidInfo}>
-                      <strong>Requirements:</strong> {aid.requirements}
-                    </div>
-                  )}
-
-                  <div style={{ display: "flex", gap: "10px", marginTop: "15px" }}>
-                    <button
-                      style={styles.editBtn}
-                      onClick={() => editFinancialAid(aid)}
-                    >
-                      ✏️ Edit
-                    </button>
-                    <button
-                      style={styles.deleteBtn}
-                      onClick={() => deleteFinancialAid(aid.id)}
-                    >
-                      🗑️ Delete
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </>
+          <FinancialAidManagement
+            financialAid={financialAid}
+            aidFormData={aidFormData}
+            aidEditId={aidEditId}
+            handleAidFormChange={handleAidFormChange}
+            addFinancialAid={addFinancialAid}
+            editFinancialAid={editFinancialAid}
+            deleteFinancialAid={deleteFinancialAid}
+          />
         )}
 
         {/* ADMIN PROFILE */}
         {active === "profile" && (
-          <>
-            <div style={styles.headerSection}>
-              <h1 style={{margin: 0, fontSize: "32px", fontWeight: "700"}}>👤 Admin Profile</h1>
-              <p style={{margin: "5px 0 0 0", color: "#666", fontSize: "14px"}}>Manage your admin account and settings</p>
-            </div>
-
-            <div style={styles.profileContainer}>
-              {!editingProfile ? (
-                <div style={styles.profileCard}>
-                  <div style={styles.profileHeader}>
-                    <div style={styles.profileImage}>{adminProfile.profileImage}</div>
-                    <div style={styles.profileInfo}>
-                      <h2 style={{margin: "0 0 8px 0", fontSize: "28px", fontWeight: "700", color: "#1e293b"}}>
-                        {adminProfile.name || "Admin"}
-                      </h2>
-                      <p style={{margin: "0 0 3px 0", color: "#64748b", fontSize: "14px"}}>
-                        📧 {adminProfile.email}
-                      </p>
-                      <p style={{margin: "8px 0 0 0", color: "#94a3b8", fontSize: "13px"}}>
-                        🏢 {adminProfile.department}
-                      </p>
-                    </div>
-                    <button style={styles.editProfileBtn} onClick={() => {setEditingProfile(true); setProfileData(adminProfile);}}>
-                      ✏️ Edit Profile
-                    </button>
-                  </div>
-
-                  <div style={styles.profileDetails}>
-                    <div style={styles.profileDetail}>
-                      <strong>Email:</strong>
-                      <p>{adminProfile.email}</p>
-                    </div>
-                    <div style={styles.profileDetail}>
-                      <strong>Phone:</strong>
-                      <p>{adminProfile.phone}</p>
-                    </div>
-                    <div style={styles.profileDetail}>
-                      <strong>Department:</strong>
-                      <p>{adminProfile.department}</p>
-                    </div>
-                    <div style={styles.profileDetail}>
-                      <strong>Member Since:</strong>
-                      <p>{adminProfile.joinDate}</p>
-                    </div>
-                  </div>
-
-                  <div style={styles.adminStats}>
-                    <div style={styles.statItem}>
-                      <span style={{fontSize: "24px"}}>📚</span>
-                      <p>Total Scholarships</p>
-                      <h3>{scholarships.length}</h3>
-                    </div>
-                    <div style={styles.statItem}>
-                      <span style={{fontSize: "24px"}}>💰</span>
-                      <p>Financial Aid Programs</p>
-                      <h3>{financialAid.length}</h3>
-                    </div>
-                    <div style={styles.statItem}>
-                      <span style={{fontSize: "24px"}}>📋</span>
-                      <p>Applications</p>
-                      <h3>{applications.length}</h3>
-                    </div>
-                  </div>
-                </div>
-              ) : (
-                <div style={styles.profileCard}>
-                  <h2>Edit Profile</h2>
-                  <div style={styles.editForm}>
-                    <div style={styles.formGroup}>
-                      <label style={styles.label}>Full Name</label>
-                      <input
-                        type="text"
-                        value={profileData.name}
-                        onChange={(e) => setProfileData({...profileData, name: e.target.value})}
-                        style={styles.input}
-                      />
-                    </div>
-                    <div style={styles.formGroup}>
-                      <label style={styles.label}>Email <span style={{fontSize: "11px", color: "#999"}}>(linked to login)</span></label>
-                      <input
-                        type="email"
-                        value={profileData.email}
-                        style={{...styles.input, backgroundColor: "#f0f0f0", cursor: "not-allowed"}}
-                        disabled
-                        title="Email is linked to your login credentials and cannot be changed here"
-                      />
-                    </div>
-                    <div style={styles.formGroup}>
-                      <label style={styles.label}>Phone</label>
-                      <input
-                        type="tel"
-                        value={profileData.phone}
-                        onChange={(e) => setProfileData({...profileData, phone: e.target.value})}
-                        style={styles.input}
-                      />
-                    </div>
-                    <div style={styles.formGroup}>
-                      <label style={styles.label}>Department</label>
-                      <input
-                        type="text"
-                        value={profileData.department}
-                        onChange={(e) => setProfileData({...profileData, department: e.target.value})}
-                        style={styles.input}
-                      />
-                    </div>
-                    <div style={{display: "flex", gap: "10px", marginTop: "20px"}}>
-                      <button
-                        style={{...styles.submitBtn, flex: 1}}
-                        onClick={updateAdminProfile}
-                      >
-                        ✓ Save Changes
-                      </button>
-                      <button
-                        style={{...styles.submitBtn, flex: 1, background: "#6b7280"}}
-                        onClick={() => setEditingProfile(false)}
-                      >
-                        ✕ Cancel
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              )}
-            </div>
-          </>
+          <AdminProfile
+            adminUser={adminProfile}
+            updateAdminProfile={updateAdminProfile}
+          />
         )}
+        {/* ANALYTICS */}
         {active === "analytics" && (
-          <>
-            <div style={styles.headerSection}>
-              <h1 style={{margin: 0, fontSize: "32px", fontWeight: "700"}}>📊 Analytics Dashboard</h1>
-              <p style={{margin: "5px 0 0 0", color: "#666", fontSize: "14px"}}>Real-time insights and statistics</p>
-            </div>
-
-            <div style={styles.analyticsCards}>
-              <div style={{...styles.analyticsCard, borderLeft: "5px solid #10b981"}}>
-                <div style={{fontSize: "28px", marginBottom: "10px"}}>✅</div>
-                <p style={styles.analyticsLabel}>Approved</p>
-                <p style={styles.analyticsValue}>{overallStatusCounts.Approved}</p>
-                <p style={{fontSize: "12px", color: "#10b981", margin: "8px 0 0 0"}}>✓ Success rate</p>
-              </div>
-              <div style={{...styles.analyticsCard, borderLeft: "5px solid #f59e0b"}}>
-                <div style={{fontSize: "28px", marginBottom: "10px"}}>⏳</div>
-                <p style={styles.analyticsLabel}>Pending</p>
-                <p style={styles.analyticsValue}>{overallStatusCounts.Pending}</p>
-                <p style={{fontSize: "12px", color: "#f59e0b", margin: "8px 0 0 0"}}>⚠ Needs review</p>
-              </div>
-              <div style={{...styles.analyticsCard, borderLeft: "5px solid #ef4444"}}>
-                <div style={{fontSize: "28px", marginBottom: "10px"}}>❌</div>
-                <p style={styles.analyticsLabel}>Rejected</p>
-                <p style={styles.analyticsValue}>{overallStatusCounts.Rejected}</p>
-                <p style={{fontSize: "12px", color: "#ef4444", margin: "8px 0 0 0"}}>Reviewed</p>
-              </div>
-            </div>
-
-            <div style={styles.chartsContainer}>
-              <div style={styles.chartCard}>
-                <h3 style={{marginTop: 0}}>Application Status Distribution</h3>
-                <ResponsiveContainer width="100%" height={300}>
-                  <PieChart>
-                    <Pie
-                      data={overallPieData}
-                      dataKey="value"
-                      outerRadius={100}
-                      label
-                    >
-                      {overallPieData.map((entry, index) => (
-                        <Cell
-                          key={index}
-                          fill={
-                            entry.name === "Approved"
-                              ? "#10b981"
-                              : entry.name === "Pending"
-                              ? "#f59e0b"
-                              : "#ef4444"
-                          }
-                        />
-                      ))}
-                    </Pie>
-                    <Tooltip />
-                    <Legend />
-                  </PieChart>
-                </ResponsiveContainer>
-              </div>
-            </div>
-
-            {lineData.length > 0 && (
-              <div style={styles.chartCard}>
-                <h3>Applications Over Time</h3>
-                <ResponsiveContainer width="100%" height={300}>
-                  <LineChart data={lineData}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
-                    <XAxis dataKey="date" stroke="#64748b" />
-                    <YAxis stroke="#64748b" />
-                    <Tooltip />
-                    <Legend />
-                    <Line
-                      type="monotone"
-                      dataKey="applications"
-                      stroke="#3b82f6"
-                      strokeWidth={3}
-                      dot={{ fill: "#3b82f6", r: 5 }}
-                    />
-                  </LineChart>
-                </ResponsiveContainer>
-              </div>
-            )}
-
-            {scholarshipWiseData.length > 0 && (
-              <>
-                <h2 style={{marginTop: "40px", marginBottom: "20px"}}>Scholarship-wise Status</h2>
-                <div style={styles.analyticsGrid}>
-                  {scholarshipWiseData.map((data, index) => (
-                    <div key={index} style={styles.chartCard}>
-                      <h4 style={{marginTop: 0, color: "#1e293b"}}>{data.scholarship}</h4>
-                      <ResponsiveContainer width="100%" height={250}>
-                        <BarChart data={[data]}>
-                          <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
-                          <XAxis dataKey="scholarship" hide />
-                          <YAxis stroke="#64748b" />
-                          <Tooltip />
-                          <Legend />
-                          <Bar dataKey="Pending" fill="#f59e0b" radius={[8, 8, 0, 0]} />
-                          <Bar dataKey="Approved" fill="#10b981" radius={[8, 8, 0, 0]} />
-                          <Bar dataKey="Rejected" fill="#ef4444" radius={[8, 8, 0, 0]} />
-                        </BarChart>
-                      </ResponsiveContainer>
-                    </div>
-                  ))}
-                </div>
-              </>
-            )}
-          </>
+          <Analytics
+            scholarships={scholarships}
+            applications={applications}
+            aidApplications={aidApplications}
+            users={[]} // You might want to pass users data if available
+          />
         )}
       </div>
     </div>
@@ -1449,6 +787,13 @@ const styles = {
     display: "flex",
     gap: "10px",
     marginTop: "15px"
+  },
+  appDescription: {
+    padding: "15px",
+    background: "#f8f9fb",
+    borderRadius: "8px",
+    marginBottom: "15px",
+    border: "1px solid #e2e8f0"
   },
   approveBtnSmall: {
     flex: 1,

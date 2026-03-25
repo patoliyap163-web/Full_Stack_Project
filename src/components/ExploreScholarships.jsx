@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 
 const ExploreScholarships = ({
   scholarships,
@@ -10,6 +10,10 @@ const ExploreScholarships = ({
   setFilterCategory,
   handleApply
 }) => {
+  const [showModal, setShowModal] = useState(false);
+  const [selectedScholarship, setSelectedScholarship] = useState(null);
+  const [description, setDescription] = useState('');
+
   const getStatus = (scholarshipId) => {
     const app = applications.find(
       (a) => a.scholarshipId === scholarshipId && a.studentName === studentName
@@ -35,6 +39,28 @@ const ExploreScholarships = ({
     const matchesCategory = filterCategory === "All" || normalizedSchCategory.includes(normalizedFilter);
     return matchesSearch && matchesCategory;
   });
+
+  const handleApplyClick = (item) => {
+    setSelectedScholarship(item);
+    setShowModal(true);
+  };
+
+  const handleSubmitApplication = () => {
+    if (description.trim()) {
+      handleApply(selectedScholarship, description);
+      setShowModal(false);
+      setDescription('');
+      setSelectedScholarship(null);
+    } else {
+      alert('Description is required');
+    }
+  };
+
+  const handleCloseModal = () => {
+    setShowModal(false);
+    setDescription('');
+    setSelectedScholarship(null);
+  };
 
   return (
     <>
@@ -119,7 +145,7 @@ const ExploreScholarships = ({
                 ) : (
                   <button
                     style={styles.applyBtn}
-                    onClick={() => handleApply(item)}
+                    onClick={() => handleApplyClick(item)}
                   >
                     ➕ Apply Now
                   </button>
@@ -127,6 +153,25 @@ const ExploreScholarships = ({
               </div>
             );
           })}
+        </div>
+      )}
+
+      {showModal && (
+        <div style={styles.modalOverlay}>
+          <div style={styles.modal}>
+            <h2>Apply for {selectedScholarship?.title}</h2>
+            <textarea
+              placeholder="Enter your application description (required)"
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              style={styles.textarea}
+              rows={5}
+            />
+            <div style={styles.modalButtons}>
+              <button style={styles.cancelBtn} onClick={handleCloseModal}>Cancel</button>
+              <button style={styles.submitBtn} onClick={handleSubmitApplication}>Apply</button>
+            </div>
+          </div>
         </div>
       )}
     </>
@@ -221,6 +266,59 @@ const styles = {
     background: "white",
     borderRadius: "12px",
     border: "1px solid #e2e8f0"
+  },
+  modalOverlay: {
+    position: "fixed",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
+    display: "flex",
+    justifyContent: "center",
+    alignItems: "center",
+    zIndex: 1000
+  },
+  modal: {
+    background: "white",
+    borderRadius: "12px",
+    padding: "20px",
+    width: "90%",
+    maxWidth: "500px",
+    boxShadow: "0 10px 25px rgba(0,0,0,0.2)"
+  },
+  textarea: {
+    width: "100%",
+    padding: "12px",
+    border: "1px solid #e2e8f0",
+    borderRadius: "8px",
+    fontSize: "14px",
+    outline: "none",
+    resize: "vertical",
+    marginBottom: "15px"
+  },
+  modalButtons: {
+    display: "flex",
+    gap: "10px",
+    justifyContent: "flex-end"
+  },
+  cancelBtn: {
+    padding: "10px 20px",
+    background: "#e2e8f0",
+    color: "#64748b",
+    border: "none",
+    borderRadius: "8px",
+    cursor: "pointer",
+    fontWeight: "600"
+  },
+  submitBtn: {
+    padding: "10px 20px",
+    background: "#3b82f6",
+    color: "white",
+    border: "none",
+    borderRadius: "8px",
+    cursor: "pointer",
+    fontWeight: "600"
   }
 };
 
