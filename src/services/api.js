@@ -40,6 +40,25 @@ export const registerUser = async (name, email, password, role) => {
   }
 };
 
+// Function to get all scholarships
+export const getScholarships = async () => {
+  try {
+    const response = await fetch('http://localhost:8080/api/scholarships', {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+    if (!response.ok) {
+      throw new Error('Failed to fetch scholarships');
+    }
+    return await response.json();
+  } catch (error) {
+    console.error('Error fetching scholarships:', error);
+    throw error;
+  }
+};
+
 // Function to apply for a scholarship
 // export const applyForScholarship = async (scholarshipId, description) => {
 //   try {

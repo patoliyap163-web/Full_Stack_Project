@@ -1,19 +1,43 @@
 import { useState, useEffect } from "react";
 import ScholarshipCard from "../components/ScholarshipCard";
+import { getScholarships } from "../services/api";
 
 function Home() {
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState("all");
   const [stats, setStats] = useState({ opportunities: 0, applications: 0, funded: 0 });
+  const [scholarships, setScholarships] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
-  const scholarships = [
-    { id: 1, title: "Merit Scholarship", amount: 50000, deadline: "31 March 2026", category: "merit", description: "Excellence in academics" },
-    { id: 2, title: "Need-Based Aid", amount: 30000, deadline: "15 April 2026", category: "need", description: "Financial assistance for students" },
-    { id: 3, title: "AI & Tech Grant", amount: 75000, deadline: "10 May 2026", category: "tech", description: "For technology & computing students" },
-    { id: 4, title: "Women in STEM", amount: 45000, deadline: "20 April 2026", category: "women", description: "Empowering women in science & tech" },
-    { id: 5, title: "International Student Award", amount: 60000, deadline: "25 May 2026", category: "international", description: "For international scholars" },
-    { id: 6, title: "Sports Excellence Award", amount: 35000, deadline: "30 March 2026", category: "sports", description: "Recognition of athletic achievement" },
-  ];
+  // Fetch scholarships from backend
+  useEffect(() => {
+    const fetchScholarships = async () => {
+      try {
+        setLoading(true);
+        const response = await getScholarships();
+        if (response.success) {
+          setScholarships(response.data || []);
+        } else {
+          setError(response.message || "Failed to load scholarships");
+        }
+      } catch (err) {
+        console.error("Error fetching scholarships:", err);
+        // If backend is not available, show a user-friendly message
+        if (err.message.includes("<!DOCTYPE")) {
+          setError("Backend service is currently unavailable. Please try again later.");
+        } else {
+          setError(err.message || "Failed to load scholarships");
+        }
+        // Optionally, you can set fallback data here
+        // setScholarships(fallbackScholarships);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchScholarships();
+  }, []);
 
   // Real-time statistics animation
   useEffect(() => {
@@ -124,7 +148,22 @@ function Home() {
 
         {/* Scholarship Cards */}
         <div style={styles.cardContainer}>
-          {filteredScholarships.length > 0 ? (
+          {loading ? (
+            <div style={styles.loadingContainer}>
+              <div style={styles.loadingSpinner}></div>
+              <p>Loading scholarships...</p>
+            </div>
+          ) : error ? (
+            <div style={styles.errorContainer}>
+              <p style={styles.errorText}>❌ {error}</p>
+              <button 
+                style={styles.retryBtn} 
+                onClick={() => window.location.reload()}
+              >
+                Try Again
+              </button>
+            </div>
+          ) : filteredScholarships.length > 0 ? (
             filteredScholarships.map((scholarship) => (
               <ScholarshipCard
                 key={scholarship.id}
