@@ -6,6 +6,7 @@ import Register from "./pages/Register";
 import StudentDashboard from "./pages/StudentDashboard";
 import AdminDashboard from "./pages/AdminDashboard";
 import ProtectedRoute from "./components/ProtectedRoute";
+import PublicRoute from "./components/PublicRoute";
 
 function App() {
   return (
@@ -13,9 +14,21 @@ function App() {
       <Navbar />
 
       <Routes>
-        <Route path="/" element={<div style={{ marginTop: "80px" }}><Home /></div>} />
-        <Route path="/login" element={<div style={{ marginTop: "80px" }}><Login /></div>} />
-        <Route path="/register" element={<div style={{ marginTop: "80px" }}><Register /></div>} />
+        <Route path="/" element={
+          <PublicRoute>
+            <div style={{ marginTop: "80px" }}><Home /></div>
+          </PublicRoute>
+        } />
+        <Route path="/login" element={
+          <PublicRoute>
+            <div style={{ marginTop: "80px" }}><Login /></div>
+          </PublicRoute>
+        } />
+        <Route path="/register" element={
+          <PublicRoute>
+            <div style={{ marginTop: "80px" }}><Register /></div>
+          </PublicRoute>
+        } />
 
         {/* Protected Student Route */}
         <Route
