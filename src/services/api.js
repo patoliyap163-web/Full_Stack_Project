@@ -83,6 +83,41 @@ export const createScholarship = async (scholarshipData) => {
   }
 };
 
+// Function to update a scholarship
+export const updateScholarship = async (id, scholarshipData) => {
+  try {
+    const response = await fetch(`${API_BASE_URL}/api/scholarships/${id}`, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(scholarshipData),
+    });
+
+    return await parseResponse(response, "Failed to update scholarship");
+  } catch (error) {
+    console.error("Error updating scholarship:", error);
+    throw error;
+  }
+};
+
+// Function to delete a scholarship
+export const deleteScholarship = async (id) => {
+  try {
+    const response = await fetch(`${API_BASE_URL}/api/scholarships/${id}`, {
+      method: "DELETE",
+      headers: {
+        "Content-Type": "application/json",
+      },
+    });
+
+    return await parseResponse(response, "Failed to delete scholarship");
+  } catch (error) {
+    console.error("Error deleting scholarship:", error);
+    throw error;
+  }
+};
+
 // Function to get scholarships for a specific admin
 export const getScholarshipsByAdmin = async (adminId) => {
   try {

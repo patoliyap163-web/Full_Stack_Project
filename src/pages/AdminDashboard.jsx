@@ -5,7 +5,12 @@ import * as XLSX from "xlsx";
 import { saveAs } from "file-saver";
 
 // Import API functions
-import { getScholarshipsByAdmin, createScholarship } from "../services/api";
+import {
+  getScholarshipsByAdmin,
+  createScholarship,
+  updateScholarship,
+  deleteScholarship
+} from "../services/api";
 
 // Import decoupled components
 import DashboardOverview from "../components/admin/DashboardOverview";
@@ -227,6 +232,21 @@ function AdminDashboard() {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
+  const resetScholarshipForm = () => {
+    setFormData({
+      title: "",
+      amount: "",
+      deadline: "",
+      description: "",
+      eligibility: "",
+      category: "",
+      gpa: "",
+      benefits: "",
+      requirements: ""
+    });
+    setEditId(null);
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
 
@@ -245,21 +265,50 @@ function AdminDashboard() {
       }
 
       if (editId) {
-        // For editing, update local state (ideally should use update API)
-        setScholarships(
-          scholarships.map((item) =>
-            item.id === editId
-              ? {
-                  ...item,
-                  ...formData,
-                  amount: parseFloat(formData.amount),
-                  gpa: formData.gpa ? parseFloat(formData.gpa) : null
-                }
-              : item
-          )
-        );
-        setEditId(null);
-        alert("Scholarship updated successfully!");
+        const currentScholarship = scholarships.find((item) => item.id === editId);
+
+        if (!currentScholarship) {
+          throw new Error("Scholarship not found for update");
+        }
+
+        const normalizedFormData = {
+          title: formData.title,
+          category: formData.category || "Academic",
+          amount: parseFloat(formData.amount),
+          gpa: formData.gpa ? parseFloat(formData.gpa) : null,
+          deadline: formData.deadline,
+          description: formData.description,
+          eligibility: formData.eligibility,
+          benefits: formData.benefits || "",
+          requirements: formData.requirements || ""
+        };
+
+        const updatePayload = Object.entries(normalizedFormData).reduce((acc, [key, value]) => {
+          const existingValue = currentScholarship[key] ?? (key === "gpa" ? null : "");
+
+          if (existingValue !== value) {
+            acc[key] = value;
+          }
+
+          return acc;
+        }, {});
+
+        if (Object.keys(updatePayload).length === 0) {
+          alert("No changes detected to update.");
+          return;
+        }
+
+        const response = await updateScholarship(editId, updatePayload);
+
+        if (response.success) {
+          setScholarships(
+            scholarships.map((item) => (item.id === editId ? response.data : item))
+          );
+          alert(response.message || "Scholarship updated successfully!");
+        } else {
+          alert(response.message || "Failed to update scholarship");
+          return;
+        }
       } else {
         // Create new scholarship via API
         const scholarshipData = {
@@ -290,7 +339,7 @@ function AdminDashboard() {
         }
       }
 
-      setFormData({ title: "", amount: "", deadline: "", description: "", eligibility: "", category: "", gpa: "", benefits: "", requirements: "" });
+      resetScholarshipForm();
       setScholarshipsError("");
     } catch (err) {
       console.error("Error handling scholarship:", err);
@@ -302,12 +351,40 @@ function AdminDashboard() {
     }
   };
 
-  const handleDelete = (id) => {
-    setScholarships(scholarships.filter((item) => item.id !== id));
+  const handleDelete = async (id) => {
+    try {
+      const response = await deleteScholarship(id);
+
+      if (!response.success) {
+        alert(response.message || "Failed to delete scholarship");
+        return;
+      }
+
+      setScholarships(scholarships.filter((item) => item.id !== id));
+
+      if (editId === id) {
+        resetScholarshipForm();
+      }
+
+      alert(response.message || "Scholarship deleted successfully!");
+    } catch (err) {
+      console.error("Error deleting scholarship:", err);
+      alert(err.message || "Failed to delete scholarship");
+    }
   };
 
   const handleEdit = (item) => {
-    setFormData(item);
+    setFormData({
+      title: item.title || "",
+      amount: item.amount ?? "",
+      deadline: item.deadline || "",
+      description: item.description || "",
+      eligibility: item.eligibility || "",
+      category: item.category || "",
+      gpa: item.gpa ?? "",
+      benefits: item.benefits || "",
+      requirements: item.requirements || ""
+    });
     setEditId(item.id);
   };
 
