@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { loginUser } from "../services/api";
 
 function Login() {
   const navigate = useNavigate();
@@ -23,41 +24,49 @@ function Login() {
     }
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
 
     setLoading(true);
+    setError("");
 
-    // Get all registered users from localStorage
-    const users = JSON.parse(localStorage.getItem("users")) || [];
+    try {
+      const response = await loginUser(formData.email, formData.password);
 
-    // Check email + password
-    const foundUser = users.find(
-      (user) =>
-        user.email === formData.email &&
-        user.password === formData.password
-    );
+      if (!response.success) {
+        throw new Error(response.message || "Login failed. Please try again.");
+      }
 
-    if (foundUser) {
-      // Save logged-in user
-      localStorage.setItem("user", JSON.stringify(foundUser));
+      // API response shape: { success: true, message, data: {id, name, email, role}}
+      const userData = response.data;
+
+      if (!userData) {
+        throw new Error("Login response is missing user data.");
+      }
+
+      // Normalize role to lower-case to match the app route checks
+      const user = {
+        ...userData,
+        role: String(userData.role || "").toLowerCase()
+      };
+
+      // Save logged-in user in sessionStorage
+      sessionStorage.setItem("user", JSON.stringify(user));
 
       // Dispatch custom event to notify Navbar component
       window.dispatchEvent(new Event("userChanged"));
 
-      // Clear any previous errors
-      setError("");
       setLoading(false);
 
       // Redirect based on role
-      if (foundUser.role === "admin") {
+      if (user.role === "admin") {
         navigate("/admin");
       } else {
         navigate("/student");
       }
 
-    } else {
-      setError("Invalid email or password");
+    } catch (err) {
+      setError(err.message || "Login failed. Please try again.");
       setLoading(false);
     }
   };

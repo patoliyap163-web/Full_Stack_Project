@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { registerUser } from "../services/api";
 
 function Register() {
 
@@ -65,39 +66,19 @@ function Register() {
 
     setLoading(true);
 
-    // Get existing users or empty array
-    const users = JSON.parse(localStorage.getItem("users")) || [];
+    try {
+      await registerUser(formData.name.trim(), formData.email.trim(), formData.password, formData.role);
 
-    // Check if email already exists
-    const userExists = users.find(
-      (user) => user.email === formData.email
-    );
-
-    if (userExists) {
-      setErrors({ email: "This email is already registered!" });
+      // Show success message
+      alert(`✅ Welcome ${formData.name}! Registration successful. Please login now.`);
+      
       setLoading(false);
-      return;
+      navigate("/login");
+
+    } catch (err) {
+      setErrors({ general: err.message || "Registration failed. Please try again." });
+      setLoading(false);
     }
-
-    // Add new user with proper data structure
-    const newUser = {
-      name: formData.name.trim(),
-      email: formData.email.trim(),
-      password: formData.password,
-      role: formData.role,
-      registeredDate: new Date().toLocaleDateString()
-    };
-    
-    users.push(newUser);
-
-    // Save updated users array
-    localStorage.setItem("users", JSON.stringify(users));
-
-    // Show success message
-    alert(`✅ Welcome ${formData.name}! Registration successful. Please login now.`);
-    
-    setLoading(false);
-    navigate("/login");
   };
 
   return (
@@ -105,6 +86,8 @@ function Register() {
       <div style={styles.card}>
         <h2 style={styles.title}>Create Account 🎓</h2>
         <p style={styles.subtitle}>Join our scholarship platform</p>
+
+        {errors.general && <p style={styles.error}>{errors.general}</p>}
 
         <form onSubmit={handleSubmit}>
 

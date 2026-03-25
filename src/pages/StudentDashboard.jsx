@@ -29,8 +29,9 @@ function StudentDashboard() {
   const [filterCategory, setFilterCategory] = useState("All");
 
   useEffect(() => {
-    // Get logged-in user from localStorage
-    const user = JSON.parse(localStorage.getItem("user"));
+    // Get logged-in user from sessionStorage
+    const stored = sessionStorage.getItem("user");
+    const user = stored ? JSON.parse(stored) : null;
     if (user) {
       setStudentName(user.name || user.email);
       setStudentEmail(user.email);

@@ -2,11 +2,13 @@ import { Navigate } from "react-router-dom";
 
 function PublicRoute({ children }) {
   // Get the user object
-  const user = JSON.parse(localStorage.getItem("user"));
+  const stored = sessionStorage.getItem("user");
+  const user = stored ? JSON.parse(stored) : null;
 
   if (user) {
     // User is logged in, redirect to appropriate dashboard
-    if (user.role === "admin") {
+    const normalizedRole = String(user.role || "").toLowerCase();
+    if (normalizedRole === "admin") {
       return <Navigate to="/admin" replace />;
     } else {
       return <Navigate to="/student" replace />;

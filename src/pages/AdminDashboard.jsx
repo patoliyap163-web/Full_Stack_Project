@@ -27,8 +27,9 @@ function AdminDashboard() {
 
   // Initialize profile from localStorage or logged-in user
   useEffect(() => {
-    // Get logged-in admin from localStorage
-    const user = JSON.parse(localStorage.getItem("user"));
+    // Get logged-in admin from sessionStorage
+    const stored = sessionStorage.getItem("user");
+    const user = stored ? JSON.parse(stored) : null;
     
     if (user && user.role === "admin") {
       setAdminEmail(user.email);

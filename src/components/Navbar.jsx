@@ -3,12 +3,23 @@ import { useState, useEffect } from "react";
 
 function Navbar() {
   const [hover, setHover] = useState(null);
-  const [user, setUser] = useState(JSON.parse(localStorage.getItem("user")));
+  const [user, setUser] = useState(() => {
+    const stored = sessionStorage.getItem("user");
+    return stored ? JSON.parse(stored) : null;
+  });
 
   useEffect(() => {
-    // Update user state when localStorage changes
+    // Update user state when sessionStorage changes
     const handleStorageChange = () => {
-      setUser(JSON.parse(localStorage.getItem("user")));
+      const stored = sessionStorage.getItem("user");
+      const parsed = stored ? JSON.parse(stored) : null;
+      setUser((prev) => {
+        if (!prev && !parsed) return prev;
+        if (prev && parsed && prev.id === parsed.id && prev.role === parsed.role && prev.email === parsed.email) {
+          return prev;
+        }
+        return parsed;
+      });
     };
 
     // Listen for custom event from login/register
@@ -17,7 +28,7 @@ function Navbar() {
     // Listen for storage changes (works across tabs/windows)
     window.addEventListener("storage", handleStorageChange);
 
-    // Also check localStorage on window focus (in case user logs in from another tab)
+    // Also check sessionStorage on window focus (in case user logs in from another tab)
     window.addEventListener("focus", handleStorageChange);
 
     return () => {
@@ -28,8 +39,8 @@ function Navbar() {
   }, []);
 
   const handleLogout = () => {
-    // Clear the user object from localStorage
-    localStorage.removeItem("user");
+    // Clear the user object from sessionStorage
+    sessionStorage.removeItem("user");
     // Update the user state immediately
     setUser(null);
     // Force full navigation to home to ensure landing on Home
