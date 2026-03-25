@@ -135,36 +135,106 @@ export const getScholarshipsByAdmin = async (adminId) => {
   }
 };
 
-// Function to apply for a scholarship
-// export const applyForScholarship = async (scholarshipId, description) => {
-//   try {
-//     const response = await fetch('/api/scholarships/apply', {
-//       method: 'POST',
-//       headers: {
-//         'Content-Type': 'application/json',
-//       },
-//       body: JSON.stringify({ scholarshipId, description }),
-//     });
-//     return await response.json();
-//   } catch (error) {
-//     console.error('Error applying for scholarship:', error);
-//     throw error;
-//   }
-// };
+// Function to get all financial aid
+export const getFinancialAid = async () => {
+  try {
+    const response = await fetch(`${API_BASE_URL}/api/financial-aid`, {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+      },
+    });
 
-// Function to express interest in financial aid
-// export const expressInterestInAid = async (aidId, description) => {
-//   try {
-//     const response = await fetch('/api/financial-aid/interest', {
-//       method: 'POST',
-//       headers: {
-//         'Content-Type': 'application/json',
-//       },
-//       body: JSON.stringify({ aidId, description }),
-//     });
-//     return await response.json();
-//   } catch (error) {
-//     console.error('Error expressing interest in aid:', error);
-//     throw error;
-//   }
-// };
+    return await parseResponse(response, "Failed to fetch financial aid");
+  } catch (error) {
+    console.error("Error fetching financial aid:", error);
+    throw error;
+  }
+};
+
+// Function to get financial aid by id
+export const getFinancialAidById = async (id) => {
+  try {
+    const response = await fetch(`${API_BASE_URL}/api/financial-aid/${id}`, {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+      },
+    });
+
+    return await parseResponse(response, "Failed to fetch financial aid");
+  } catch (error) {
+    console.error("Error fetching financial aid by id:", error);
+    throw error;
+  }
+};
+
+// Function to create financial aid
+export const createFinancialAid = async (financialAidData) => {
+  try {
+    const response = await fetch(`${API_BASE_URL}/api/financial-aid`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(financialAidData),
+    });
+
+    return await parseResponse(response, "Failed to create financial aid");
+  } catch (error) {
+    console.error("Error creating financial aid:", error);
+    throw error;
+  }
+};
+
+// Function to update financial aid
+export const updateFinancialAid = async (id, financialAidData) => {
+  try {
+    const response = await fetch(`${API_BASE_URL}/api/financial-aid/${id}`, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(financialAidData),
+    });
+
+    return await parseResponse(response, "Failed to update financial aid");
+  } catch (error) {
+    console.error("Error updating financial aid:", error);
+    throw error;
+  }
+};
+
+// Function to delete financial aid
+export const deleteFinancialAid = async (id) => {
+  try {
+    const response = await fetch(`${API_BASE_URL}/api/financial-aid/${id}`, {
+      method: "DELETE",
+      headers: {
+        "Content-Type": "application/json",
+      },
+    });
+
+    return await parseResponse(response, "Failed to delete financial aid");
+  } catch (error) {
+    console.error("Error deleting financial aid:", error);
+    throw error;
+  }
+};
+
+// Function to get financial aid for a specific admin
+export const getFinancialAidByAdmin = async (adminId) => {
+  try {
+    const response = await fetch(`${API_BASE_URL}/api/financial-aid/admin/${adminId}`, {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+      },
+    });
+
+    return await parseResponse(response, "Failed to fetch admin financial aid");
+  } catch (error) {
+    console.error("Error fetching admin financial aid:", error);
+    throw error;
+  }
+};

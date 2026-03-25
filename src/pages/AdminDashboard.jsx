@@ -9,7 +9,11 @@ import {
   getScholarshipsByAdmin,
   createScholarship,
   updateScholarship,
-  deleteScholarship
+  deleteScholarship,
+  getFinancialAidByAdmin,
+  createFinancialAid,
+  updateFinancialAid,
+  deleteFinancialAid
 } from "../services/api";
 
 // Import decoupled components
@@ -27,6 +31,9 @@ function AdminDashboard() {
   const [scholarships, setScholarships] = useState([]);
   const [scholarshipsLoading, setScholarshipsLoading] = useState(false);
   const [scholarshipsError, setScholarshipsError] = useState("");
+  const [financialAid, setFinancialAid] = useState([]);
+  const [financialAidLoading, setFinancialAidLoading] = useState(false);
+  const [financialAidError, setFinancialAidError] = useState("");
   const [adminProfile, setAdminProfile] = useState({
     name: "Admin User",
     email: "admin@scholarship.com",
@@ -98,10 +105,38 @@ function AdminDashboard() {
     fetchAdminScholarships();
   }, []);
 
-  const [financialAid, setFinancialAid] = useState(() => {
-    const saved = localStorage.getItem("financialAid");
-    return saved ? JSON.parse(saved) : [];
-  });
+  useEffect(() => {
+    const fetchAdminFinancialAid = async () => {
+      try {
+        setFinancialAidLoading(true);
+        setFinancialAidError("");
+        const stored = sessionStorage.getItem("user");
+        const user = stored ? JSON.parse(stored) : null;
+
+        if (user && user.role === "admin" && user.id) {
+          const response = await getFinancialAidByAdmin(user.id);
+          if (response.success) {
+            setFinancialAid(response.data || []);
+          } else {
+            setFinancialAidError(response.message || "Failed to load financial aid");
+          }
+        } else {
+          setFinancialAidError("Admin user not found");
+        }
+      } catch (err) {
+        console.error("Error fetching admin financial aid:", err);
+        if (err.message.includes("<!DOCTYPE")) {
+          setFinancialAidError("Backend service is currently unavailable. Please try again later.");
+        } else {
+          setFinancialAidError(err.message || "Failed to load financial aid");
+        }
+      } finally {
+        setFinancialAidLoading(false);
+      }
+    };
+
+    fetchAdminFinancialAid();
+  }, []);
 
   const [aidFormData, setAidFormData] = useState({
     title: "",
@@ -182,36 +217,129 @@ function AdminDashboard() {
     setAidFormData({ ...aidFormData, [e.target.name]: e.target.value });
   };
 
-  const addFinancialAid = (e) => {
+  const resetFinancialAidForm = () => {
+    setAidFormData({
+      title: "",
+      type: "Loan",
+      amount: "",
+      interestRate: "",
+      deadline: "",
+      description: "",
+      requirements: ""
+    });
+    setAidEditId(null);
+  };
+
+  const addFinancialAid = async (e) => {
     e.preventDefault();
     if (!aidFormData.title || !aidFormData.amount) {
       alert("Please fill in required fields");
       return;
     }
 
-    if (aidEditId) {
-      setFinancialAid(
-        financialAid.map((item) =>
-          item.id === aidEditId ? { ...item, ...aidFormData } : item
-        )
-      );
-      setAidEditId(null);
-    } else {
-      const newAid = {
-        id: Date.now(),
-        ...aidFormData
-      };
-      setFinancialAid([...financialAid, newAid]);
-    }
+    try {
+      const stored = sessionStorage.getItem("user");
+      const user = stored ? JSON.parse(stored) : null;
 
-    setAidFormData({ title: "", type: "Loan", amount: "", interestRate: "", deadline: "", description: "", requirements: "" });
+      if (!user || !user.id) {
+        alert("Admin user not found. Please login again.");
+        return;
+      }
+
+      if (aidEditId) {
+        const currentAid = financialAid.find((item) => item.id === aidEditId);
+
+        if (!currentAid) {
+          throw new Error("Financial aid not found for update");
+        }
+
+        const normalizedAidData = {
+          title: aidFormData.title,
+          type: aidFormData.type || "Loan",
+          amount: parseFloat(aidFormData.amount),
+          interestRate: aidFormData.interestRate === "" ? 0 : parseFloat(aidFormData.interestRate),
+          deadline: aidFormData.deadline || "",
+          description: aidFormData.description || "",
+          requirements: aidFormData.requirements || ""
+        };
+
+        const updatePayload = Object.entries(normalizedAidData).reduce((acc, [key, value]) => {
+          const existingValue = currentAid[key] ?? "";
+          if (existingValue !== value) {
+            acc[key] = value;
+          }
+          return acc;
+        }, {});
+
+        if (Object.keys(updatePayload).length === 0) {
+          alert("No changes detected to update.");
+          return;
+        }
+
+        const response = await updateFinancialAid(aidEditId, updatePayload);
+        if (response.success) {
+          setFinancialAid(
+            financialAid.map((item) => (item.id === aidEditId ? response.data : item))
+          );
+          alert(response.message || "Financial aid updated successfully!");
+        } else {
+          alert(response.message || "Failed to update financial aid");
+          return;
+        }
+      } else {
+        const payload = {
+          title: aidFormData.title,
+          type: aidFormData.type || "Loan",
+          amount: parseFloat(aidFormData.amount),
+          interestRate: aidFormData.interestRate === "" ? 0 : parseFloat(aidFormData.interestRate),
+          deadline: aidFormData.deadline || "",
+          description: aidFormData.description || "",
+          requirements: aidFormData.requirements || "",
+          admin: {
+            id: user.id
+          }
+        };
+
+        const response = await createFinancialAid(payload);
+        if (response.success) {
+          const updatedResponse = await getFinancialAidByAdmin(user.id);
+          if (updatedResponse.success) {
+            setFinancialAid(updatedResponse.data || []);
+          }
+          alert(response.message || "Financial aid created successfully!");
+        } else {
+          alert(response.message || "Failed to create financial aid");
+          return;
+        }
+      }
+
+      resetFinancialAidForm();
+      setFinancialAidError("");
+    } catch (err) {
+      console.error("Error handling financial aid:", err);
+      alert(err.message || "Failed to save financial aid");
+    }
   };
 
-  const deleteFinancialAid = (id) => {
-    setFinancialAid(financialAid.filter((item) => item.id !== id));
-    if (id === aidEditId) {
-      setAidEditId(null);
-      setAidFormData({ title: "", type: "Loan", amount: "", interestRate: "", deadline: "", description: "", requirements: "" });
+  const deleteFinancialAidItem = async (id) => {
+    try {
+      const response = await deleteFinancialAid(id);
+
+      if (!response.success) {
+        alert(response.message || "Failed to delete financial aid");
+        return;
+      }
+
+      setFinancialAid(financialAid.filter((item) => item.id !== id));
+
+      if (id === aidEditId) {
+        resetFinancialAidForm();
+      }
+
+      alert(response.message || "Financial aid deleted successfully!");
+    } catch (err) {
+      console.error("Error deleting financial aid:", err);
+      alert(err.message || "Failed to delete financial aid");
     }
   };
 
@@ -612,7 +740,9 @@ function AdminDashboard() {
             handleAidFormChange={handleAidFormChange}
             addFinancialAid={addFinancialAid}
             editFinancialAid={editFinancialAid}
-            deleteFinancialAid={deleteFinancialAid}
+            deleteFinancialAid={deleteFinancialAidItem}
+            financialAidLoading={financialAidLoading}
+            financialAidError={financialAidError}
           />
         )}
 
