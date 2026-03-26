@@ -13,7 +13,9 @@ import {
   getFinancialAidByAdmin,
   createFinancialAid,
   updateFinancialAid,
-  deleteFinancialAid
+  deleteFinancialAid,
+  getApplicationsByAdmin,
+  updateApplicationStatusById
 } from "../services/api";
 
 // Import decoupled components
@@ -34,6 +36,8 @@ function AdminDashboard() {
   const [financialAid, setFinancialAid] = useState([]);
   const [financialAidLoading, setFinancialAidLoading] = useState(false);
   const [financialAidError, setFinancialAidError] = useState("");
+  const [applications, setApplications] = useState([]);
+  const [aidApplications, setAidApplications] = useState([]);
   const [adminProfile, setAdminProfile] = useState({
     name: "Admin User",
     email: "admin@scholarship.com",
@@ -148,16 +152,6 @@ function AdminDashboard() {
     requirements: ""
   });
 
-  const [applications, setApplications] = useState(() => {
-    const saved = localStorage.getItem("applications");
-    return saved ? JSON.parse(saved) : [];
-  });
-
-  const [aidApplications, setAidApplications] = useState(() => {
-    const saved = localStorage.getItem("aidApplications");
-    return saved ? JSON.parse(saved) : [];
-  });
-
   const [formData, setFormData] = useState({
     title: "",
     amount: "",
@@ -188,20 +182,35 @@ function AdminDashboard() {
   }, [scholarships]);
 
   useEffect(() => {
-    localStorage.setItem("applications", JSON.stringify(applications));
-  }, [applications]);
-
-  useEffect(() => {
-    localStorage.setItem("aidApplications", JSON.stringify(aidApplications));
-  }, [aidApplications]);
-
-  useEffect(() => {
     localStorage.setItem("financialAid", JSON.stringify(financialAid));
   }, [financialAid]);
 
   useEffect(() => {
     localStorage.setItem("adminProfile", JSON.stringify(adminProfile));
   }, [adminProfile]);
+
+  useEffect(() => {
+    const fetchAdminApplications = async () => {
+      try {
+        const stored = sessionStorage.getItem("user");
+        const user = stored ? JSON.parse(stored) : null;
+
+        if (!user || user.role !== "admin" || !user.id) {
+          return;
+        }
+
+        const response = await getApplicationsByAdmin(user.id);
+        if (response.success) {
+          setApplications(response.data?.scholarshipApplications || []);
+          setAidApplications(response.data?.financialAidApplications || []);
+        }
+      } catch (err) {
+        console.error("Error fetching admin applications:", err);
+      }
+    };
+
+    fetchAdminApplications();
+  }, []);
 
 
 
@@ -516,39 +525,59 @@ function AdminDashboard() {
     setEditId(item.id);
   };
 
-  const updateApplicationStatus = (id, status) => {
-    const updated = applications.map((app) =>
-      app.id === id ? { ...app, status } : app
-    );
-    setApplications(updated);
+  const updateApplicationStatus = async (id, status) => {
+    try {
+      const response = await updateApplicationStatusById(id, status.toUpperCase());
+
+      if (!response.success) {
+        alert(response.message || "Failed to update application status");
+        return;
+      }
+
+      setApplications(applications.map((app) => (app.id === id ? response.data : app)));
+      alert(response.message || "Application status updated successfully!");
+    } catch (err) {
+      console.error("Error updating application status:", err);
+      alert(err.message || "Failed to update application status");
+    }
   };
 
-  const updateAidApplicationStatus = (id, status) => {
-    const updated = aidApplications.map((app) =>
-      app.id === id ? { ...app, status } : app
-    );
-    setAidApplications(updated);
+  const updateAidApplicationStatus = async (id, status) => {
+    try {
+      const response = await updateApplicationStatusById(id, status.toUpperCase());
+
+      if (!response.success) {
+        alert(response.message || "Failed to update aid application status");
+        return;
+      }
+
+      setAidApplications(aidApplications.map((app) => (app.id === id ? response.data : app)));
+      alert(response.message || "Aid application status updated successfully!");
+    } catch (err) {
+      console.error("Error updating aid application status:", err);
+      alert(err.message || "Failed to update aid application status");
+    }
   };
 
   // ===== Filter Logic =====
   const filteredApplications = applications.filter((app) => {
-    const matchesSearch = (app.studentName || "")
+    const matchesSearch = (app.student?.name || "")
       .toLowerCase()
       .includes(searchTerm.toLowerCase());
 
     const matchesStatus =
-      filterStatus === "All" || app.status === filterStatus;
+      filterStatus === "All" || app.status === filterStatus.toUpperCase();
 
     return matchesSearch && matchesStatus;
   });
 
   const filteredAidApplications = aidApplications.filter((app) => {
-    const matchesSearch = (app.studentName || "")
+    const matchesSearch = (app.student?.name || "")
       .toLowerCase()
       .includes(aidSearchTerm.toLowerCase());
 
     const matchesStatus =
-      aidFilterStatus === "All" || app.status === aidFilterStatus;
+      aidFilterStatus === "All" || app.status === aidFilterStatus.toUpperCase();
 
     return matchesSearch && matchesStatus;
   });
@@ -580,7 +609,7 @@ function AdminDashboard() {
     const tableRows = [];
 
     filteredApplications.forEach((app) => {
-      tableRows.push([app.studentName, app.scholarshipTitle, app.status]);
+      tableRows.push([app.student?.name || "", app.scholarship?.title || "", app.status]);
     });
 
     autoTable(doc, {
@@ -618,9 +647,9 @@ function AdminDashboard() {
   };
 
   applications.forEach((app) => {
-    if (overallStatusCounts[app.status] !== undefined) {
-      overallStatusCounts[app.status]++;
-    }
+    if (app.status === "PENDING") overallStatusCounts.Pending++;
+    if (app.status === "APPROVED") overallStatusCounts.Approved++;
+    if (app.status === "REJECTED") overallStatusCounts.Rejected++;
   });
 
   const aidStatusCounts = {
@@ -630,9 +659,9 @@ function AdminDashboard() {
   };
 
   aidApplications.forEach((app) => {
-    if (aidStatusCounts[app.status] !== undefined) {
-      aidStatusCounts[app.status]++;
-    }
+    if (app.status === "PENDING") aidStatusCounts.Pending++;
+    if (app.status === "APPROVED") aidStatusCounts.Approved++;
+    if (app.status === "REJECTED") aidStatusCounts.Rejected++;
   });
 
   return (

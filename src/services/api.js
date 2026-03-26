@@ -256,6 +256,23 @@ export const getApplicationsByStudent = async (studentId) => {
   }
 };
 
+// Function to get applications for a specific admin
+export const getApplicationsByAdmin = async (adminId) => {
+  try {
+    const response = await fetch(`${API_BASE_URL}/api/application/admin/${adminId}`, {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+      },
+    });
+
+    return await parseResponse(response, "Failed to fetch admin applications");
+  } catch (error) {
+    console.error("Error fetching admin applications:", error);
+    throw error;
+  }
+};
+
 // Function to create a scholarship application
 export const createApplication = async (applicationData) => {
   try {
@@ -270,6 +287,24 @@ export const createApplication = async (applicationData) => {
     return await parseResponse(response, "Failed to submit application");
   } catch (error) {
     console.error("Error creating application:", error);
+    throw error;
+  }
+};
+
+// Function to update application status
+export const updateApplicationStatusById = async (id, status) => {
+  try {
+    const response = await fetch(`${API_BASE_URL}/api/application/${id}/status`, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ status }),
+    });
+
+    return await parseResponse(response, "Failed to update application status");
+  } catch (error) {
+    console.error("Error updating application status:", error);
     throw error;
   }
 };

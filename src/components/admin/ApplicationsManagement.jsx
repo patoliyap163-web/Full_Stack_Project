@@ -16,6 +16,14 @@ const ApplicationsManagement = ({
   currentPage,
   setCurrentPage
 }) => {
+  const formatStatus = (status) => {
+    if (!status) return "";
+    return status.charAt(0) + status.slice(1).toLowerCase();
+  };
+
+  const getStudentName = (app) => app.student?.name || "Student details unavailable";
+  const getScholarshipTitle = (app) => app.scholarship?.title || `Scholarship Application #${app.id}`;
+
   const exportToPDF = () => {
     const doc = new jsPDF();
     doc.text("Scholarship Applications Report", 14, 15);
@@ -24,16 +32,16 @@ const ApplicationsManagement = ({
     const tableRows = [];
 
     applications.filter((app) => {
-      const matchesSearch = (app.studentName || "")
+      const matchesSearch = getStudentName(app)
         .toLowerCase()
         .includes(searchTerm.toLowerCase());
 
       const matchesStatus =
-        filterStatus === "All" || app.status === filterStatus;
+        filterStatus === "All" || app.status === filterStatus.toUpperCase();
 
       return matchesSearch && matchesStatus;
     }).forEach((app) => {
-      tableRows.push([app.studentName, app.scholarshipTitle, app.status]);
+      tableRows.push([getStudentName(app), getScholarshipTitle(app), formatStatus(app.status)]);
     });
 
     autoTable(doc, {
@@ -47,12 +55,12 @@ const ApplicationsManagement = ({
 
   const exportToExcel = () => {
     const filteredApps = applications.filter((app) => {
-      const matchesSearch = (app.studentName || "")
+      const matchesSearch = getStudentName(app)
         .toLowerCase()
         .includes(searchTerm.toLowerCase());
 
       const matchesStatus =
-        filterStatus === "All" || app.status === filterStatus;
+        filterStatus === "All" || app.status === filterStatus.toUpperCase();
 
       return matchesSearch && matchesStatus;
     });
@@ -115,19 +123,21 @@ const ApplicationsManagement = ({
             <div key={app.id} style={styles.applicationCard}>
               <div style={styles.appHeader}>
                 <div>
-                  <h3 style={{margin: "0 0 5px 0", fontSize: "18px"}}>{app.studentName}</h3>
-                  <p style={{margin: 0, color: "#666", fontSize: "13px"}}>{app.scholarshipTitle}</p>
-                  <p style={{margin: "5px 0 0 0", color: "#64748b", fontSize: "13px"}}>Applied on {app.appliedDate}</p>
+                  <h3 style={{margin: "0 0 5px 0", fontSize: "18px"}}>{getStudentName(app)}</h3>
+                  <p style={{margin: 0, color: "#666", fontSize: "13px"}}>{getScholarshipTitle(app)}</p>
+                  <p style={{margin: "5px 0 0 0", color: "#64748b", fontSize: "13px"}}>
+                    Applied on {app.appliedAt ? new Date(app.appliedAt).toLocaleDateString() : "N/A"}
+                  </p>
                 </div>
                 <span style={{
                   padding: "6px 12px",
                   borderRadius: "20px",
                   fontWeight: "600",
                   fontSize: "12px",
-                  background: app.status === "Approved" ? "#d1fae5" : app.status === "Pending" ? "#fef3c7" : "#fee2e2",
-                  color: app.status === "Approved" ? "#065f46" : app.status === "Pending" ? "#92400e" : "#991b1b"
+                  background: app.status === "APPROVED" ? "#d1fae5" : app.status === "PENDING" ? "#fef3c7" : "#fee2e2",
+                  color: app.status === "APPROVED" ? "#065f46" : app.status === "PENDING" ? "#92400e" : "#991b1b"
                 }}>
-                  {app.status}
+                  {formatStatus(app.status)}
                 </span>
               </div>
 
@@ -138,7 +148,7 @@ const ApplicationsManagement = ({
                 </div>
               )}
 
-              {app.status === "Pending" && (
+              {app.status === "PENDING" && (
                 <div style={styles.appActions}>
                   <button
                     style={styles.approveBtnSmall}
