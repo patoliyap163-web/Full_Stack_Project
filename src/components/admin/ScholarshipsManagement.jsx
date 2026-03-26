@@ -33,7 +33,6 @@ const ScholarshipsManagement = ({
                 required
               />
             </div>
-
             <div style={styles.formGroup}>
               <label style={styles.label}>Category</label>
               <select
@@ -64,7 +63,6 @@ const ScholarshipsManagement = ({
                 required
               />
             </div>
-
             <div style={styles.formGroup}>
               <label style={styles.label}>Deadline *</label>
               <input
@@ -90,7 +88,6 @@ const ScholarshipsManagement = ({
                 required
               />
             </div>
-
             <div style={styles.formGroup}>
               <label style={styles.label}>Eligibility *</label>
               <textarea
@@ -119,7 +116,6 @@ const ScholarshipsManagement = ({
                 style={styles.input}
               />
             </div>
-
             <div style={styles.formGroup}>
               <label style={styles.label}>Benefits</label>
               <textarea
@@ -169,7 +165,6 @@ const ScholarshipsManagement = ({
                   <h3 style={{ margin: "0 0 8px 0", color: "white" }}>{item.title}</h3>
                   <span style={styles.categoryBadge}>{item.category || "Scholarship"}</span>
                 </div>
-
                 <div style={styles.amountBox}>
                   <span style={styles.currencySymbol}>$</span>
                   <span style={styles.amountValue}>{item.amount}</span>
@@ -188,9 +183,7 @@ const ScholarshipsManagement = ({
 
               {item.gpa !== null && item.gpa !== undefined && item.gpa !== "" && (
                 <div style={styles.cardSection}>
-                  <h4 style={styles.sectionTitle}>
-                    Min GPA: <strong>{item.gpa}</strong>
-                  </h4>
+                  <h4 style={styles.sectionTitle}>Min GPA: <strong>{item.gpa}</strong></h4>
                 </div>
               )}
 
@@ -213,10 +206,10 @@ const ScholarshipsManagement = ({
               </div>
 
               <div style={styles.cardActions}>
-                <button type="button" style={styles.editBtn} onClick={() => handleEdit(item)}>
+                <button style={styles.editBtn} onClick={() => handleEdit(item)}>
                   Edit
                 </button>
-                <button type="button" style={styles.deleteBtn} onClick={() => handleDelete(item.id)}>
+                <button style={styles.deleteBtn} onClick={() => handleDelete(item.id)}>
                   Delete
                 </button>
               </div>
