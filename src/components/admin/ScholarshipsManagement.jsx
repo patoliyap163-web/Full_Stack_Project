@@ -15,9 +15,7 @@ const ScholarshipsManagement = ({
     <>
       <div style={styles.headerSection}>
         <h1 style={{ margin: 0, fontSize: "32px", fontWeight: "700" }}>Manage Scholarships</h1>
-        <p style={{ margin: "5px 0 0 0", color: "#666", fontSize: "14px" }}>
-          Create and manage scholarship programs
-        </p>
+        <p style={{ margin: "5px 0 0 0", color: "#666", fontSize: "14px" }}>Create and manage scholarship programs</p>
       </div>
 
       <div style={styles.formContainer}>
