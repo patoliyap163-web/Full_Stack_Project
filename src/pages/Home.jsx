@@ -1,8 +1,10 @@
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import ScholarshipCard from "../components/ScholarshipCard";
 import { getScholarships } from "../services/api";
 
 function Home() {
+  const navigate = useNavigate();
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState("all");
   const [stats, setStats] = useState({ opportunities: 0, applications: 0, funded: 0 });
@@ -10,7 +12,6 @@ function Home() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  // Fetch scholarships from backend
   useEffect(() => {
     const fetchScholarships = async () => {
       try {
@@ -23,14 +24,11 @@ function Home() {
         }
       } catch (err) {
         console.error("Error fetching scholarships:", err);
-        // If backend is not available, show a user-friendly message
         if (err.message.includes("<!DOCTYPE")) {
           setError("Backend service is currently unavailable. Please try again later.");
         } else {
           setError(err.message || "Failed to load scholarships");
         }
-        // Optionally, you can set fallback data here
-        // setScholarships(fallbackScholarships);
       } finally {
         setLoading(false);
       }
@@ -39,7 +37,6 @@ function Home() {
     fetchScholarships();
   }, []);
 
-  // Real-time statistics animation
   useEffect(() => {
     const interval = setInterval(() => {
       setStats({
@@ -48,26 +45,31 @@ function Home() {
         funded: Math.floor(Math.random() * 50) + 25
       });
     }, 3000);
+
     return () => clearInterval(interval);
   }, []);
 
   const filteredScholarships = scholarships.filter((s) => {
-    const matchSearch = s.title.toLowerCase().includes(search.toLowerCase());
-    const matchFilter = filter === "all" || s.category === filter;
+    const title = s.title || "";
+    const category = String(s.category || "").toLowerCase();
+    const matchSearch = title.toLowerCase().includes(search.toLowerCase());
+    const matchFilter = filter === "all" || category === filter;
     return matchSearch && matchFilter;
   });
 
+  const handleScholarshipExplore = () => {
+    navigate("/login");
+  };
+
   return (
     <div style={styles.container}>
-      {/* Hero Section */}
       <section style={styles.hero}>
         <div style={styles.heroContent}>
           <h1 style={styles.heroTitle}>Your Dream Scholarship Awaits</h1>
           <p style={styles.heroSubtitle}>
             Discover, apply, and track scholarships & financial aid opportunities in one place
           </p>
-          
-          {/* Search Bar */}
+
           <div style={styles.searchContainer}>
             <input
               type="text"
@@ -77,13 +79,12 @@ function Home() {
               style={styles.searchInput}
             />
             <button style={styles.searchBtn} aria-label="Search">
-              <img src="/search-icon.png" alt="Search" style={{width: "18px", height: "18px", display: "block"}} />
+              <img src="/search-icon.png" alt="Search" style={{ width: "18px", height: "18px", display: "block" }} />
             </button>
           </div>
         </div>
       </section>
 
-      {/* Real-time Statistics */}
       <section style={styles.statsSection}>
         <div style={styles.statCard}>
           <h3 style={styles.statNumber}>{stats.opportunities}+</h3>
@@ -99,7 +100,6 @@ function Home() {
         </div>
       </section>
 
-      {/* Benefits Section */}
       <section style={styles.benefitsSection}>
         <h2 style={styles.sectionTitle}>Why Choose Our Platform?</h2>
         <div style={styles.benefitsGrid}>
@@ -126,11 +126,9 @@ function Home() {
         </div>
       </section>
 
-      {/* Scholarships Section */}
       <section style={styles.section}>
         <h2 style={styles.sectionTitle}>Featured Scholarships</h2>
-        
-        {/* Filter Buttons */}
+
         <div style={styles.filterContainer}>
           {["all", "merit", "need", "tech", "women", "sports"].map((category) => (
             <button
@@ -146,7 +144,6 @@ function Home() {
           ))}
         </div>
 
-        {/* Scholarship Cards */}
         <div style={styles.cardContainer}>
           {loading ? (
             <div style={styles.loadingContainer}>
@@ -156,8 +153,8 @@ function Home() {
           ) : error ? (
             <div style={styles.errorContainer}>
               <p style={styles.errorText}>❌ {error}</p>
-              <button 
-                style={styles.retryBtn} 
+              <button
+                style={styles.retryBtn}
                 onClick={() => window.location.reload()}
               >
                 Try Again
@@ -170,6 +167,7 @@ function Home() {
                 title={scholarship.title}
                 amount={scholarship.amount}
                 deadline={scholarship.deadline}
+                onApply={handleScholarshipExplore}
               />
             ))
           ) : (
@@ -178,11 +176,10 @@ function Home() {
         </div>
       </section>
 
-      {/* CTA Section */}
       <section style={styles.ctaSection}>
         <h2>Ready to Start Your Scholarship Journey?</h2>
         <p>Join thousands of students who have successfully secured their funding</p>
-        <button style={styles.ctaBtn}>Explore More Scholarships →</button>
+        <button style={styles.ctaBtn} onClick={handleScholarshipExplore}>Explore More Scholarships →</button>
       </section>
     </div>
   );

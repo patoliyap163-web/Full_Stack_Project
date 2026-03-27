@@ -1,39 +1,65 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 
 const AdminProfile = ({
   adminUser,
-  updateAdminProfile
+  updateAdminProfile,
+  profileLoading,
+  profileError,
+  profileSaving
 }) => {
   const [isEditing, setIsEditing] = useState(false);
+  const [saveError, setSaveError] = useState("");
   const [formData, setFormData] = useState({
-    name: adminUser?.name || '',
+    fullName: adminUser?.fullName || adminUser?.name || '',
     email: adminUser?.email || '',
     phone: adminUser?.phone || '',
     department: adminUser?.department || '',
+    joinDate: adminUser?.joinDate || '',
     role: adminUser?.role || 'Administrator'
   });
 
+  useEffect(() => {
+    setFormData({
+      fullName: adminUser?.fullName || adminUser?.name || '',
+      email: adminUser?.email || '',
+      phone: adminUser?.phone || '',
+      department: adminUser?.department || '',
+      joinDate: adminUser?.joinDate || '',
+      role: adminUser?.role || 'Administrator'
+    });
+  }, [adminUser]);
+
   const handleInputChange = (e) => {
     const { name, value } = e.target;
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
       [name]: value
     }));
   };
 
-  const handleSave = () => {
-    updateAdminProfile(formData);
-    setIsEditing(false);
+  const getDisplayValue = (value) => value ? value : 'Not provided';
+
+  const handleSave = async () => {
+    setSaveError("");
+
+    try {
+      await updateAdminProfile(formData);
+      setIsEditing(false);
+    } catch (error) {
+      setSaveError(error.message || "Failed to save profile");
+    }
   };
 
   const handleCancel = () => {
     setFormData({
-      name: adminUser?.name || '',
+      fullName: adminUser?.fullName || adminUser?.name || '',
       email: adminUser?.email || '',
       phone: adminUser?.phone || '',
       department: adminUser?.department || '',
+      joinDate: adminUser?.joinDate || '',
       role: adminUser?.role || 'Administrator'
     });
+    setSaveError("");
     setIsEditing(false);
   };
 
@@ -44,158 +70,199 @@ const AdminProfile = ({
         <p style={{margin: "5px 0 0 0", color: "#666", fontSize: "14px"}}>Manage your account information</p>
       </div>
 
-      <div style={styles.profileContainer}>
-        <div style={styles.profileHeader}>
-          <div style={styles.avatar}>
-            <span style={{fontSize: "48px"}}>👨‍💼</span>
+      {profileError && !isEditing && (
+        <div style={styles.errorBanner}>{profileError}</div>
+      )}
+
+      {profileLoading ? (
+        <div style={styles.profileContainer}>
+          <div style={styles.loadingState}>Loading profile...</div>
+        </div>
+      ) : (
+        <div style={styles.profileContainer}>
+          <div style={styles.profileHeader}>
+            <div style={styles.avatar}>
+              <span style={{fontSize: "48px"}}>👨‍💼</span>
+            </div>
+            <div style={styles.profileInfo}>
+              <h2 style={{margin: "0 0 5px 0", fontSize: "24px"}}>
+                {adminUser?.fullName || adminUser?.name || 'Administrator'}
+              </h2>
+              <p style={{margin: 0, color: "#666", fontSize: "16px"}}>{adminUser?.role || 'Administrator'}</p>
+              <p style={{margin: "5px 0 0 0", color: "#64748b", fontSize: "14px"}}>
+                Member since {getDisplayValue(adminUser?.joinDate)}
+              </p>
+            </div>
+            {!isEditing && (
+              <button
+                style={styles.editBtn}
+                onClick={() => setIsEditing(true)}
+              >
+                ✏️ Edit Profile
+              </button>
+            )}
           </div>
-          <div style={styles.profileInfo}>
-            <h2 style={{margin: "0 0 5px 0", fontSize: "24px"}}>{adminUser?.name || 'Administrator'}</h2>
-            <p style={{margin: 0, color: "#666", fontSize: "16px"}}>{adminUser?.role || 'Administrator'}</p>
-            <p style={{margin: "5px 0 0 0", color: "#64748b", fontSize: "14px"}}>Member since {adminUser?.joinDate || '2024'}</p>
+
+          <div style={styles.profileDetails}>
+            {(saveError || profileError) && isEditing && (
+              <div style={styles.errorBanner}>{saveError || profileError}</div>
+            )}
+
+            <div style={styles.detailSection}>
+              <h3 style={{margin: "0 0 20px 0", fontSize: "20px", fontWeight: "600"}}>Personal Information</h3>
+
+              <div style={styles.formGrid}>
+                <div style={styles.formGroup}>
+                  <label style={styles.label}>Full Name</label>
+                  {isEditing ? (
+                    <input
+                      type="text"
+                      name="fullName"
+                      value={formData.fullName}
+                      onChange={handleInputChange}
+                      style={styles.input}
+                    />
+                  ) : (
+                    <p style={styles.value}>{getDisplayValue(adminUser?.fullName || adminUser?.name)}</p>
+                  )}
+                </div>
+
+                <div style={styles.formGroup}>
+                  <label style={styles.label}>Email Address</label>
+                  {isEditing ? (
+                    <input
+                      type="email"
+                      name="email"
+                      value={formData.email}
+                      style={{...styles.input, background: "#f8fafc", cursor: "not-allowed"}}
+                      disabled
+                    />
+                  ) : (
+                    <p style={styles.value}>{getDisplayValue(adminUser?.email)}</p>
+                  )}
+                </div>
+
+                <div style={styles.formGroup}>
+                  <label style={styles.label}>Phone Number</label>
+                  {isEditing ? (
+                    <input
+                      type="tel"
+                      name="phone"
+                      value={formData.phone}
+                      onChange={handleInputChange}
+                      style={styles.input}
+                    />
+                  ) : (
+                    <p style={styles.value}>{getDisplayValue(adminUser?.phone)}</p>
+                  )}
+                </div>
+
+                <div style={styles.formGroup}>
+                  <label style={styles.label}>Department</label>
+                  {isEditing ? (
+                    <input
+                      type="text"
+                      name="department"
+                      value={formData.department}
+                      onChange={handleInputChange}
+                      style={styles.input}
+                    />
+                  ) : (
+                    <p style={styles.value}>{getDisplayValue(adminUser?.department)}</p>
+                  )}
+                </div>
+
+                <div style={styles.formGroup}>
+                  <label style={styles.label}>Join Date</label>
+                  {isEditing ? (
+                    <input
+                      type="date"
+                      name="joinDate"
+                      value={formData.joinDate}
+                      onChange={handleInputChange}
+                      style={styles.input}
+                    />
+                  ) : (
+                    <p style={styles.value}>{getDisplayValue(adminUser?.joinDate)}</p>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            <div style={styles.detailSection}>
+              <h3 style={{margin: "0 0 20px 0", fontSize: "20px", fontWeight: "600"}}>Account Information</h3>
+
+              <div style={styles.formGrid}>
+                <div style={styles.formGroup}>
+                  <label style={styles.label}>Role</label>
+                  <p style={styles.value}>{getDisplayValue(adminUser?.role)}</p>
+                </div>
+
+                <div style={styles.formGroup}>
+                  <label style={styles.label}>Account Status</label>
+                  <span style={styles.statusBadge}>
+                    Active
+                  </span>
+                </div>
+
+                <div style={styles.formGroup}>
+                  <label style={styles.label}>Last Login</label>
+                  <p style={styles.value}>{adminUser?.lastLogin || 'Today'}</p>
+                </div>
+
+                <div style={styles.formGroup}>
+                  <label style={styles.label}>Account Created</label>
+                  <p style={styles.value}>{getDisplayValue(adminUser?.joinDate)}</p>
+                </div>
+              </div>
+            </div>
           </div>
-          {!isEditing && (
-            <button
-              style={styles.editBtn}
-              onClick={() => setIsEditing(true)}
-            >
-              ✏️ Edit Profile
-            </button>
+
+          {isEditing && (
+            <div style={styles.actionButtons}>
+              <button
+                style={styles.saveBtn}
+                onClick={handleSave}
+                disabled={profileSaving}
+              >
+                {profileSaving ? "Saving..." : "💾 Save Changes"}
+              </button>
+              <button
+                style={styles.cancelBtn}
+                onClick={handleCancel}
+                disabled={profileSaving}
+              >
+                ❌ Cancel
+              </button>
+            </div>
           )}
         </div>
-
-        <div style={styles.profileDetails}>
-          <div style={styles.detailSection}>
-            <h3 style={{margin: "0 0 20px 0", fontSize: "20px", fontWeight: "600"}}>Personal Information</h3>
-
-            <div style={styles.formGrid}>
-              <div style={styles.formGroup}>
-                <label style={styles.label}>Full Name</label>
-                {isEditing ? (
-                  <input
-                    type="text"
-                    name="name"
-                    value={formData.name}
-                    onChange={handleInputChange}
-                    style={styles.input}
-                  />
-                ) : (
-                  <p style={styles.value}>{adminUser?.name || 'Not provided'}</p>
-                )}
-              </div>
-
-              <div style={styles.formGroup}>
-                <label style={styles.label}>Email Address</label>
-                {isEditing ? (
-                  <input
-                    type="email"
-                    name="email"
-                    value={formData.email}
-                    onChange={handleInputChange}
-                    style={styles.input}
-                  />
-                ) : (
-                  <p style={styles.value}>{adminUser?.email || 'Not provided'}</p>
-                )}
-              </div>
-
-              <div style={styles.formGroup}>
-                <label style={styles.label}>Phone Number</label>
-                {isEditing ? (
-                  <input
-                    type="tel"
-                    name="phone"
-                    value={formData.phone}
-                    onChange={handleInputChange}
-                    style={styles.input}
-                  />
-                ) : (
-                  <p style={styles.value}>{adminUser?.phone || 'Not provided'}</p>
-                )}
-              </div>
-
-              <div style={styles.formGroup}>
-                <label style={styles.label}>Department</label>
-                {isEditing ? (
-                  <input
-                    type="text"
-                    name="department"
-                    value={formData.department}
-                    onChange={handleInputChange}
-                    style={styles.input}
-                  />
-                ) : (
-                  <p style={styles.value}>{adminUser?.department || 'Not provided'}</p>
-                )}
-              </div>
-            </div>
-          </div>
-
-          <div style={styles.detailSection}>
-            <h3 style={{margin: "0 0 20px 0", fontSize: "20px", fontWeight: "600"}}>Account Information</h3>
-
-            <div style={styles.formGrid}>
-              <div style={styles.formGroup}>
-                <label style={styles.label}>Role</label>
-                <p style={styles.value}>{adminUser?.role || 'Administrator'}</p>
-              </div>
-
-              <div style={styles.formGroup}>
-                <label style={styles.label}>Account Status</label>
-                <span style={{
-                  padding: "6px 12px",
-                  borderRadius: "20px",
-                  fontWeight: "600",
-                  fontSize: "12px",
-                  background: "#d1fae5",
-                  color: "#065f46"
-                }}>
-                  Active
-                </span>
-              </div>
-
-              <div style={styles.formGroup}>
-                <label style={styles.label}>Last Login</label>
-                <p style={styles.value}>{adminUser?.lastLogin || 'Today'}</p>
-              </div>
-
-              <div style={styles.formGroup}>
-                <label style={styles.label}>Account Created</label>
-                <p style={styles.value}>{adminUser?.joinDate || 'January 2024'}</p>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {isEditing && (
-          <div style={styles.actionButtons}>
-            <button
-              style={styles.saveBtn}
-              onClick={handleSave}
-            >
-              💾 Save Changes
-            </button>
-            <button
-              style={styles.cancelBtn}
-              onClick={handleCancel}
-            >
-              ❌ Cancel
-            </button>
-          </div>
-        )}
-      </div>
+      )}
     </>
   );
 };
 
 const styles = {
   headerSection: { marginBottom: "40px", paddingBottom: "20px", borderBottom: "2px solid #e2e8f0" },
+  errorBanner: {
+    marginBottom: "20px",
+    padding: "12px 14px",
+    borderRadius: "8px",
+    background: "#fee2e2",
+    color: "#b91c1c",
+    border: "1px solid #fecaca",
+    fontSize: "14px"
+  },
   profileContainer: {
     background: "white",
     borderRadius: "12px",
     border: "1px solid #e2e8f0",
     boxShadow: "0 2px 8px rgba(0,0,0,0.06)",
     overflow: "hidden"
+  },
+  loadingState: {
+    padding: "30px",
+    color: "#64748b"
   },
   profileHeader: {
     background: "linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)",
@@ -262,6 +329,15 @@ const styles = {
     fontSize: "16px",
     outline: "none",
     transition: "all 0.3s ease"
+  },
+  statusBadge: {
+    padding: "6px 12px",
+    borderRadius: "20px",
+    fontWeight: "600",
+    fontSize: "12px",
+    background: "#d1fae5",
+    color: "#065f46",
+    width: "fit-content"
   },
   actionButtons: {
     padding: "20px 30px",

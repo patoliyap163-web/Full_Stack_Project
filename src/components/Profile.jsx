@@ -1,15 +1,55 @@
 import React, { useState, useEffect } from 'react';
 
+const MAJOR_OPTIONS = [
+  "Computer Science",
+  "Information Technology",
+  "Software Engineering",
+  "Data Science",
+  "Business Administration",
+  "Finance",
+  "Economics",
+  "Mechanical Engineering",
+  "Electrical Engineering",
+  "Civil Engineering",
+  "Biotechnology",
+  "Medicine",
+  "Law",
+  "Psychology",
+  "English",
+  "Other"
+];
+
+const UNIVERSITY_OPTIONS = [
+  "Harvard University",
+  "Stanford University",
+  "Massachusetts Institute of Technology",
+  "University of California, Berkeley",
+  "University of Oxford",
+  "University of Cambridge",
+  "IIT Bombay",
+  "IIT Delhi",
+  "IIT Madras",
+  "Delhi University",
+  "Jawaharlal Nehru University",
+  "Anna University",
+  "Other"
+];
+
 const Profile = ({
   studentProfile,
   setStudentProfile,
   studentEmail,
   applications,
   scholarships,
-  setActive
+  setActive,
+  updateStudentProfile,
+  profileLoading,
+  profileError,
+  profileSaving
 }) => {
   const [editingProfile, setEditingProfile] = useState(false);
   const [editData, setEditData] = useState(studentProfile);
+  const [saveError, setSaveError] = useState("");
 
   useEffect(() => {
     setEditData(studentProfile);
@@ -21,14 +61,30 @@ const Profile = ({
   const getPendingCount = () => myApplications.filter(a => a.status === "PENDING").length;
   const getRejectedCount = () => myApplications.filter(a => a.status === "REJECTED").length;
 
-  const updateProfile = () => {
+  const getDisplayValue = (value) => value ? value : "Not provided";
+  const getDisplayGpa = () => {
+    if (studentProfile.gpa === "" || studentProfile.gpa === null || studentProfile.gpa === undefined) {
+      return "None";
+    }
+
+    return `${studentProfile.gpa} / 4.0`;
+  };
+
+  const updateProfile = async () => {
+    setSaveError("");
+
     const updatedProfile = {
       ...editData,
       email: studentEmail // Keep email synchronized
     };
-    setStudentProfile(updatedProfile);
-    localStorage.setItem("studentProfile", JSON.stringify(updatedProfile));
-    setEditingProfile(false);
+
+    try {
+      await updateStudentProfile(updatedProfile);
+      setStudentProfile(updatedProfile);
+      setEditingProfile(false);
+    } catch (error) {
+      setSaveError(error.message || "Failed to save profile");
+    }
   };
 
   return (
@@ -38,7 +94,15 @@ const Profile = ({
         <p style={{margin: "5px 0 0 0", color: "#666", fontSize: "14px"}}>Complete student account information</p>
       </div>
 
-      {!editingProfile ? (
+      {profileError && !editingProfile && (
+        <div style={styles.errorBanner}>{profileError}</div>
+      )}
+
+      {profileLoading ? (
+        <div style={styles.profileCard}>
+          <p style={{margin: 0, color: "#64748b"}}>Loading profile...</p>
+        </div>
+      ) : !editingProfile ? (
         <div style={styles.profileCard}>
           <div style={{display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "30px"}}>
             <div>
@@ -46,7 +110,7 @@ const Profile = ({
                 👋 {studentProfile.fullName || "Student"}
               </h2>
               <p style={{margin: "0 0 3px 0", color: "#64748b", fontSize: "14px"}}>
-                📧 {studentProfile.email || "Not provided"}
+                📧 {getDisplayValue(studentProfile.email)}
               </p>
               <p style={{margin: "8px 0 0 0", color: "#94a3b8", fontSize: "13px"}}>
                 📚 {studentProfile.major || "Major not specified"}
@@ -62,55 +126,46 @@ const Profile = ({
 
           {/* Detailed Information Grid - All in Single Card */}
           <div style={styles.singleCardInfoGrid}>
-            {/* Full Name */}
             <div style={styles.infoRow}>
               <div style={styles.infoLabel}>👤 Full Name</div>
-              <div style={styles.infoValue}>{studentProfile.fullName || "Not provided"}</div>
+              <div style={styles.infoValue}>{getDisplayValue(studentProfile.fullName)}</div>
             </div>
 
-            {/* Email */}
             <div style={styles.infoRow}>
               <div style={styles.infoLabel}>📧 Email Address</div>
-              <div style={styles.infoValue}>{studentProfile.email || "Not provided"}</div>
+              <div style={styles.infoValue}>{getDisplayValue(studentProfile.email)}</div>
             </div>
 
-            {/* Phone */}
             <div style={styles.infoRow}>
               <div style={styles.infoLabel}>📱 Phone Number</div>
-              <div style={styles.infoValue}>{studentProfile.phone || "Not provided"}</div>
+              <div style={styles.infoValue}>{getDisplayValue(studentProfile.phone)}</div>
             </div>
 
-            {/* Major */}
             <div style={styles.infoRow}>
               <div style={styles.infoLabel}>📚 Major/Field of Study</div>
-              <div style={styles.infoValue}>{studentProfile.major || "Not provided"}</div>
+              <div style={styles.infoValue}>{getDisplayValue(studentProfile.major)}</div>
             </div>
 
-            {/* GPA */}
             <div style={styles.infoRow}>
               <div style={styles.infoLabel}>📊 Grade Point Average (GPA)</div>
-              <div style={styles.infoValue}>{studentProfile.gpa || "0.0"} / 4.0</div>
+              <div style={styles.infoValue}>{getDisplayGpa()}</div>
             </div>
 
-            {/* University */}
             <div style={styles.infoRow}>
               <div style={styles.infoLabel}>🏫 University/Institute</div>
-              <div style={styles.infoValue}>{studentProfile.university || "Not provided"}</div>
+              <div style={styles.infoValue}>{getDisplayValue(studentProfile.university)}</div>
             </div>
 
-            {/* Enrollment Date */}
             <div style={styles.infoRow}>
               <div style={styles.infoLabel}>📅 Member Since</div>
-              <div style={styles.infoValue}>{studentProfile.enrollmentDate}</div>
+              <div style={styles.infoValue}>{getDisplayValue(studentProfile.enrollmentDate)}</div>
             </div>
           </div>
 
-          {/* Statistics Section */}
           <div style={styles.statsSection}>
             <h2 style={{marginTop: "30px", marginBottom: "30px", fontSize: "26px", fontWeight: "700"}}>📈 Your Application Statistics</h2>
 
             <div style={styles.detailedStatsContainer}>
-              {/* Total Applications */}
               <div style={styles.detailedStatCard}>
                 <div style={{fontSize: "40px", marginBottom: "15px"}}>📝</div>
                 <h4 style={{margin: "0 0 10px 0", color: "#64748b"}}>Total Applications</h4>
@@ -120,7 +175,6 @@ const Profile = ({
                 <p style={{margin: "10px 0 0 0", fontSize: "13px", color: "#999"}}>Applications submitted</p>
               </div>
 
-              {/* Approved Applications */}
               <div style={styles.detailedStatCard}>
                 <div style={{fontSize: "40px", marginBottom: "15px"}}>✅</div>
                 <h4 style={{margin: "0 0 10px 0", color: "#64748b"}}>Scholarships Won</h4>
@@ -130,7 +184,6 @@ const Profile = ({
                 <p style={{margin: "10px 0 0 0", fontSize: "13px", color: "#999"}}>Approved applications</p>
               </div>
 
-              {/* Pending Applications */}
               <div style={styles.detailedStatCard}>
                 <div style={{fontSize: "40px", marginBottom: "15px"}}>⏳</div>
                 <h4 style={{margin: "0 0 10px 0", color: "#64748b"}}>Pending Review</h4>
@@ -140,7 +193,6 @@ const Profile = ({
                 <p style={{margin: "10px 0 0 0", fontSize: "13px", color: "#999"}}>Awaiting decisions</p>
               </div>
 
-              {/* Rejected Applications */}
               <div style={styles.detailedStatCard}>
                 <div style={{fontSize: "40px", marginBottom: "15px"}}>❌</div>
                 <h4 style={{margin: "0 0 10px 0", color: "#64748b"}}>Not Selected</h4>
@@ -150,7 +202,6 @@ const Profile = ({
                 <p style={{margin: "10px 0 0 0", fontSize: "13px", color: "#999"}}>Rejected applications</p>
               </div>
 
-              {/* Average Scholarship */}
               <div style={styles.detailedStatCard}>
                 <div style={{fontSize: "40px", marginBottom: "15px"}}>💰</div>
                 <h4 style={{margin: "0 0 10px 0", color: "#64748b"}}>Avg. Scholarship</h4>
@@ -160,7 +211,6 @@ const Profile = ({
                 <p style={{margin: "10px 0 0 0", fontSize: "13px", color: "#999"}}>Average amount</p>
               </div>
 
-              {/* Success Rate */}
               <div style={styles.detailedStatCard}>
                 <div style={{fontSize: "40px", marginBottom: "15px"}}>🎯</div>
                 <h4 style={{margin: "0 0 10px 0", color: "#64748b"}}>Success Rate</h4>
@@ -172,7 +222,6 @@ const Profile = ({
             </div>
           </div>
 
-          {/* Quick Actions */}
           <div style={styles.quickActionsSection}>
             <h2 style={{marginTop: "40px", marginBottom: "25px", fontSize: "26px", fontWeight: "700"}}>🚀 Quick Actions</h2>
 
@@ -192,12 +241,17 @@ const Profile = ({
       ) : (
         <div style={styles.profileCard}>
           <h2 style={{marginTop: 0}}>✏️ Edit Your Profile</h2>
+
+          {(saveError || profileError) && (
+            <div style={styles.errorBanner}>{saveError || profileError}</div>
+          )}
+
           <div style={styles.editProfileForm}>
             <div style={styles.formGroup}>
               <label style={styles.label}>Full Name</label>
               <input
                 type="text"
-                value={editData.fullName}
+                value={editData.fullName || ""}
                 onChange={(e) => setEditData({...editData, fullName: e.target.value})}
                 style={styles.profileInput}
                 placeholder="Enter your full name"
@@ -209,7 +263,7 @@ const Profile = ({
                 <label style={styles.label}>Email <span style={{fontSize: "11px", color: "#999"}}>(linked to login)</span></label>
                 <input
                   type="email"
-                  value={editData.email}
+                  value={editData.email || studentEmail || ""}
                   style={{...styles.profileInput, backgroundColor: "#f0f0f0", cursor: "not-allowed"}}
                   disabled
                   title="Email is linked to your login credentials and cannot be changed here"
@@ -219,7 +273,7 @@ const Profile = ({
                 <label style={styles.label}>Phone</label>
                 <input
                   type="tel"
-                  value={editData.phone}
+                  value={editData.phone || ""}
                   onChange={(e) => setEditData({...editData, phone: e.target.value})}
                   style={styles.profileInput}
                   placeholder="Your phone number"
@@ -230,20 +284,25 @@ const Profile = ({
             <div style={styles.formRow}>
               <div style={styles.formGroup}>
                 <label style={styles.label}>Major/Field of Study</label>
-                <input
-                  type="text"
-                  value={editData.major}
+                <select
+                  value={editData.major || ""}
                   onChange={(e) => setEditData({...editData, major: e.target.value})}
                   style={styles.profileInput}
-                  placeholder="e.g., Computer Science"
-                />
+                >
+                  <option value="">Select major</option>
+                  {MAJOR_OPTIONS.map((major) => (
+                    <option key={major} value={major}>{major}</option>
+                  ))}
+                </select>
               </div>
               <div style={styles.formGroup}>
                 <label style={styles.label}>GPA</label>
                 <input
                   type="number"
+                  min="0"
+                  max="4"
                   step="0.01"
-                  value={editData.gpa}
+                  value={editData.gpa || ""}
                   onChange={(e) => setEditData({...editData, gpa: e.target.value})}
                   style={styles.profileInput}
                   placeholder="e.g., 3.8"
@@ -253,12 +312,25 @@ const Profile = ({
 
             <div style={styles.formGroup}>
               <label style={styles.label}>University/Institute Name</label>
-              <input
-                type="text"
-                value={editData.university}
+              <select
+                value={editData.university || ""}
                 onChange={(e) => setEditData({...editData, university: e.target.value})}
                 style={styles.profileInput}
-                placeholder="Name of your university"
+              >
+                <option value="">Select university</option>
+                {UNIVERSITY_OPTIONS.map((university) => (
+                  <option key={university} value={university}>{university}</option>
+                ))}
+              </select>
+            </div>
+
+            <div style={styles.formGroup}>
+              <label style={styles.label}>Enrollment Date</label>
+              <input
+                type="date"
+                value={editData.enrollmentDate || ""}
+                onChange={(e) => setEditData({...editData, enrollmentDate: e.target.value})}
+                style={styles.profileInput}
               />
             </div>
 
@@ -266,12 +338,18 @@ const Profile = ({
               <button
                 style={{...styles.submitBtn, flex: 1}}
                 onClick={updateProfile}
+                disabled={profileSaving}
               >
-                ✓ Save Changes
+                {profileSaving ? "Saving..." : "✓ Save Changes"}
               </button>
               <button
                 style={{...styles.submitBtn, flex: 1, background: "#6b7280"}}
-                onClick={() => setEditingProfile(false)}
+                onClick={() => {
+                  setEditingProfile(false);
+                  setSaveError("");
+                  setEditData(studentProfile);
+                }}
+                disabled={profileSaving}
               >
                 ✕ Cancel
               </button>
@@ -285,6 +363,15 @@ const Profile = ({
 
 const styles = {
   headerSection: { marginBottom: "30px", paddingBottom: "20px", borderBottom: "2px solid #e2e8f0" },
+  errorBanner: {
+    marginBottom: "20px",
+    padding: "12px 14px",
+    borderRadius: "8px",
+    background: "#fee2e2",
+    color: "#b91c1c",
+    border: "1px solid #fecaca",
+    fontSize: "14px"
+  },
   profileCard: {
     background: "white",
     borderRadius: "12px",

@@ -8,8 +8,37 @@ import {
   getScholarships,
   getFinancialAid,
   getApplicationsByStudent,
-  createApplication
+  createApplication,
+  getStudentProfileByUserId,
+  updateStudentProfileByUserId
 } from "../services/api";
+
+const createDefaultStudentProfile = (email = "", fullName = "") => ({
+  fullName,
+  email,
+  phone: "",
+  gpa: "",
+  major: "",
+  enrollmentDate: "",
+  university: ""
+});
+
+const normalizeStudentProfile = (profile, email = "", fullName = "") => {
+  const safeProfile = profile && typeof profile === "object" ? profile : {};
+
+  return {
+    fullName: safeProfile.fullName || fullName || "",
+    email,
+    phone: safeProfile.phone || "",
+    gpa:
+      safeProfile.gpa === 0 || safeProfile.gpa
+        ? String(safeProfile.gpa)
+        : "",
+    major: safeProfile.major || "",
+    enrollmentDate: safeProfile.enrollmentDate || "",
+    university: safeProfile.university || ""
+  };
+};
 
 function StudentDashboard() {
   const [active, setActive] = useState("explore");
@@ -22,18 +51,10 @@ function StudentDashboard() {
   const [scholarshipsError, setScholarshipsError] = useState("");
   const [studentName, setStudentName] = useState("");
   const [studentEmail, setStudentEmail] = useState("");
-  const [studentProfile, setStudentProfile] = useState(() => {
-    const saved = localStorage.getItem("studentProfile");
-    return saved ? JSON.parse(saved) : {
-      fullName: "",
-      email: "",
-      phone: "",
-      gpa: "",
-      major: "",
-      enrollmentDate: new Date().toLocaleDateString(),
-      university: ""
-    };
-  });
+  const [studentProfile, setStudentProfile] = useState(createDefaultStudentProfile());
+  const [profileLoading, setProfileLoading] = useState(false);
+  const [profileError, setProfileError] = useState("");
+  const [profileSaving, setProfileSaving] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [filterCategory, setFilterCategory] = useState("All");
   const allApplications = [...applications, ...aidApplications];
@@ -46,23 +67,46 @@ function StudentDashboard() {
       setStudentId(user.id || null);
       setStudentName(user.name || user.email);
       setStudentEmail(user.email);
-
-      const profile = JSON.parse(localStorage.getItem("studentProfile")) || {};
-
-      if (!profile.fullName && user.name) {
-        profile.fullName = user.name;
-      }
-      if (!profile.email && user.email) {
-        profile.email = user.email;
-      }
-      if (!profile.enrollmentDate) {
-        profile.enrollmentDate = new Date().toLocaleDateString();
-      }
-
-      localStorage.setItem("studentProfile", JSON.stringify(profile));
-      setStudentProfile(profile);
+      setStudentProfile(createDefaultStudentProfile(user.email || "", user.name || ""));
     }
   }, []);
+
+  useEffect(() => {
+    const fetchStudentProfile = async () => {
+      if (!studentId) {
+        return;
+      }
+
+      const stored = sessionStorage.getItem("user");
+      const user = stored ? JSON.parse(stored) : null;
+
+      try {
+        setProfileLoading(true);
+        setProfileError("");
+
+        const response = await getStudentProfileByUserId(studentId);
+        const backendProfile = response?.data;
+        const hasProfileData =
+          backendProfile &&
+          typeof backendProfile === "object" &&
+          Object.keys(backendProfile).length > 0;
+
+        setStudentProfile(
+          hasProfileData
+            ? normalizeStudentProfile(backendProfile, user?.email || "", user?.name || "")
+            : createDefaultStudentProfile(user?.email || "", user?.name || "")
+        );
+      } catch (err) {
+        console.error("Error fetching student profile:", err);
+        setProfileError(err.message || "Failed to load profile");
+        setStudentProfile(createDefaultStudentProfile(user?.email || "", user?.name || ""));
+      } finally {
+        setProfileLoading(false);
+      }
+    };
+
+    fetchStudentProfile();
+  }, [studentId]);
 
   useEffect(() => {
     const fetchStudentData = async () => {
@@ -105,6 +149,44 @@ function StudentDashboard() {
 
     fetchStudentData();
   }, [studentId]);
+
+  const handleUpdateStudentProfile = async (profileData) => {
+    if (!studentId) {
+      throw new Error("Student not found. Please login again.");
+    }
+
+    try {
+      setProfileSaving(true);
+      setProfileError("");
+
+      const payload = {
+        fullName: profileData.fullName?.trim() || "",
+        phone: profileData.phone?.trim() || "",
+        major: profileData.major || "",
+        gpa: profileData.gpa === "" ? 0 : Number(profileData.gpa),
+        university: profileData.university || "",
+        enrollmentDate: profileData.enrollmentDate || ""
+      };
+
+      const response = await updateStudentProfileByUserId(studentId, payload);
+      const updatedProfile = normalizeStudentProfile(
+        response?.data && typeof response.data === "object" && Object.keys(response.data).length > 0
+          ? response.data
+          : payload,
+        studentEmail,
+        studentName
+      );
+
+      setStudentProfile(updatedProfile);
+      return response;
+    } catch (err) {
+      console.error("Error updating student profile:", err);
+      setProfileError(err.message || "Failed to save profile");
+      throw err;
+    } finally {
+      setProfileSaving(false);
+    }
+  };
 
   const handleApply = async (scholarship, description) => {
     const alreadyApplied = applications.find((app) => app.scholarship?.id === scholarship.id);
@@ -213,6 +295,10 @@ function StudentDashboard() {
             applications={allApplications}
             scholarships={scholarships}
             setActive={setActive}
+            updateStudentProfile={handleUpdateStudentProfile}
+            profileLoading={profileLoading}
+            profileError={profileError}
+            profileSaving={profileSaving}
           />
         );
       default:

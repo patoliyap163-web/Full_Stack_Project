@@ -15,7 +15,9 @@ import {
   updateFinancialAid,
   deleteFinancialAid,
   getApplicationsByAdmin,
-  updateApplicationStatusById
+  updateApplicationStatusById,
+  getAdminProfileByUserId,
+  updateAdminProfileByUserId
 } from "../services/api";
 
 // Import decoupled components
@@ -27,9 +29,36 @@ import AidApplicationsManagement from "../components/admin/AidApplicationsManage
 import Analytics from "../components/admin/Analytics";
 import AdminProfile from "../components/admin/AdminProfile";
 
+const createDefaultAdminProfile = (email = "", fullName = "", role = "Administrator") => ({
+  fullName,
+  email,
+  phone: "",
+  department: "",
+  joinDate: "",
+  role,
+  profileImage: "👨‍💼"
+});
+
+const normalizeAdminProfile = (profile, email = "", fullName = "", role = "Administrator") => {
+  const safeProfile = profile && typeof profile === "object" ? profile : {};
+
+  return {
+    fullName: safeProfile.fullName || safeProfile.name || fullName || "",
+    email,
+    phone: safeProfile.phone || "",
+    department: safeProfile.department || "",
+    joinDate: safeProfile.joinDate || "",
+    role: safeProfile.role || role,
+    profileImage: safeProfile.profileImage || "👨‍💼"
+  };
+};
+
 function AdminDashboard() {
   const [active, setActive] = useState("dashboard");
   const [adminEmail, setAdminEmail] = useState("");
+  const [adminId, setAdminId] = useState(null);
+  const [adminName, setAdminName] = useState("");
+  const [adminRole, setAdminRole] = useState("Administrator");
   const [scholarships, setScholarships] = useState([]);
   const [scholarshipsLoading, setScholarshipsLoading] = useState(false);
   const [scholarshipsError, setScholarshipsError] = useState("");
@@ -38,6 +67,9 @@ function AdminDashboard() {
   const [financialAidError, setFinancialAidError] = useState("");
   const [applications, setApplications] = useState([]);
   const [aidApplications, setAidApplications] = useState([]);
+  const [profileLoading, setProfileLoading] = useState(false);
+  const [profileError, setProfileError] = useState("");
+  const [profileSaving, setProfileSaving] = useState(false);
   const [adminProfile, setAdminProfile] = useState({
     name: "Admin User",
     email: "admin@scholarship.com",
@@ -55,6 +87,13 @@ function AdminDashboard() {
     
     if (user && user.role === "admin") {
       setAdminEmail(user.email);
+      setAdminId(user.id || null);
+      setAdminName(user.name || "Admin");
+      setAdminRole(
+        user.role
+          ? `${String(user.role).charAt(0).toUpperCase()}${String(user.role).slice(1)}`
+          : "Administrator"
+      );
       
       // Get saved admin profile or create new one
       let profile = JSON.parse(localStorage.getItem("adminProfile")) || {};
@@ -74,6 +113,46 @@ function AdminDashboard() {
       setAdminProfile(profile);
     }
   }, []);
+
+  useEffect(() => {
+    const fetchAdminProfile = async () => {
+      if (!adminId) {
+        return;
+      }
+
+      const stored = sessionStorage.getItem("user");
+      const user = stored ? JSON.parse(stored) : null;
+      const resolvedRole = user?.role
+        ? `${String(user.role).charAt(0).toUpperCase()}${String(user.role).slice(1)}`
+        : "Administrator";
+
+      try {
+        setProfileLoading(true);
+        setProfileError("");
+
+        const response = await getAdminProfileByUserId(adminId);
+        const backendProfile = response?.data;
+        const hasProfileData =
+          backendProfile &&
+          typeof backendProfile === "object" &&
+          Object.keys(backendProfile).length > 0;
+
+        setAdminProfile(
+          hasProfileData
+            ? normalizeAdminProfile(backendProfile, user?.email || "", user?.name || "Admin", resolvedRole)
+            : createDefaultAdminProfile(user?.email || "", user?.name || "Admin", resolvedRole)
+        );
+      } catch (err) {
+        console.error("Error fetching admin profile:", err);
+        setProfileError(err.message || "Failed to load admin profile");
+        setAdminProfile(createDefaultAdminProfile(user?.email || "", user?.name || "Admin", resolvedRole));
+      } finally {
+        setProfileLoading(false);
+      }
+    };
+
+    fetchAdminProfile();
+  }, [adminId]);
 
   // Fetch scholarships for the logged-in admin
   useEffect(() => {
@@ -186,10 +265,6 @@ function AdminDashboard() {
   }, [financialAid]);
 
   useEffect(() => {
-    localStorage.setItem("adminProfile", JSON.stringify(adminProfile));
-  }, [adminProfile]);
-
-  useEffect(() => {
     const fetchAdminApplications = async () => {
       try {
         const stored = sessionStorage.getItem("user");
@@ -214,12 +289,41 @@ function AdminDashboard() {
 
 
 
-  const updateAdminProfile = (newProfileData) => {
-    const updatedProfile = {
-      ...newProfileData,
-      email: adminEmail || newProfileData.email // Keep email synchronized
-    };
-    setAdminProfile(updatedProfile);
+  const updateAdminProfile = async (newProfileData) => {
+    if (!adminId) {
+      throw new Error("Admin user not found. Please login again.");
+    }
+
+    try {
+      setProfileSaving(true);
+      setProfileError("");
+
+      const payload = {
+        fullName: newProfileData.fullName?.trim() || "",
+        phone: newProfileData.phone?.trim() || "",
+        department: newProfileData.department?.trim() || "",
+        joinDate: newProfileData.joinDate || ""
+      };
+
+      const response = await updateAdminProfileByUserId(adminId, payload);
+      const updatedProfile = normalizeAdminProfile(
+        response?.data && typeof response.data === "object" && Object.keys(response.data).length > 0
+          ? response.data
+          : payload,
+        adminEmail,
+        adminName,
+        adminRole
+      );
+
+      setAdminProfile(updatedProfile);
+      return response;
+    } catch (err) {
+      console.error("Error updating admin profile:", err);
+      setProfileError(err.message || "Failed to save admin profile");
+      throw err;
+    } finally {
+      setProfileSaving(false);
+    }
   };
 
   const handleAidFormChange = (e) => {
@@ -780,6 +884,9 @@ function AdminDashboard() {
           <AdminProfile
             adminUser={adminProfile}
             updateAdminProfile={updateAdminProfile}
+            profileLoading={profileLoading}
+            profileError={profileError}
+            profileSaving={profileSaving}
           />
         )}
         {/* ANALYTICS */}

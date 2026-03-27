@@ -3,7 +3,8 @@
 const API_BASE_URL = "http://localhost:8080";
 
 const parseResponse = async (response, fallbackMessage) => {
-  const data = await response.json();
+  const responseText = await response.text();
+  const data = responseText ? JSON.parse(responseText) : {};
 
   if (!response.ok) {
     throw new Error(data?.message || fallbackMessage);
@@ -305,6 +306,84 @@ export const updateApplicationStatusById = async (id, status) => {
     return await parseResponse(response, "Failed to update application status");
   } catch (error) {
     console.error("Error updating application status:", error);
+    throw error;
+  }
+};
+
+// Function to get student profile by user id
+export const getStudentProfileByUserId = async (userId) => {
+  try {
+    const response = await fetch(`${API_BASE_URL}/student-profile/${userId}`, {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+      },
+    });
+
+    if (response.status === 404 || response.status === 204) {
+      return { success: true, data: {} };
+    }
+
+    return await parseResponse(response, "Failed to fetch student profile");
+  } catch (error) {
+    console.error("Error fetching student profile:", error);
+    throw error;
+  }
+};
+
+// Function to update student profile by user id
+export const updateStudentProfileByUserId = async (userId, profileData) => {
+  try {
+    const response = await fetch(`${API_BASE_URL}/student-profile/${userId}`, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(profileData),
+    });
+
+    return await parseResponse(response, "Failed to update student profile");
+  } catch (error) {
+    console.error("Error updating student profile:", error);
+    throw error;
+  }
+};
+
+// Function to get admin profile by user id
+export const getAdminProfileByUserId = async (userId) => {
+  try {
+    const response = await fetch(`${API_BASE_URL}/admin-profile/${userId}`, {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+      },
+    });
+
+    if (response.status === 404 || response.status === 204) {
+      return { success: true, data: {} };
+    }
+
+    return await parseResponse(response, "Failed to fetch admin profile");
+  } catch (error) {
+    console.error("Error fetching admin profile:", error);
+    throw error;
+  }
+};
+
+// Function to update admin profile by user id
+export const updateAdminProfileByUserId = async (userId, profileData) => {
+  try {
+    const response = await fetch(`${API_BASE_URL}/admin-profile/${userId}`, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(profileData),
+    });
+
+    return await parseResponse(response, "Failed to update admin profile");
+  } catch (error) {
+    console.error("Error updating admin profile:", error);
     throw error;
   }
 };

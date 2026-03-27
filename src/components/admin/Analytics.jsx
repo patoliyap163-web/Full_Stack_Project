@@ -1,29 +1,101 @@
-import React from 'react';
+import React, { useMemo } from 'react';
+
+const STATUS = {
+  APPROVED: "APPROVED",
+  PENDING: "PENDING",
+  REJECTED: "REJECTED"
+};
+
+const getStatusCounts = (items = []) => {
+  return items.reduce(
+    (counts, item) => {
+      const normalizedStatus = String(item?.status || "").toUpperCase();
+
+      if (normalizedStatus === STATUS.APPROVED) counts.approved += 1;
+      if (normalizedStatus === STATUS.PENDING) counts.pending += 1;
+      if (normalizedStatus === STATUS.REJECTED) counts.rejected += 1;
+
+      return counts;
+    },
+    { approved: 0, pending: 0, rejected: 0 }
+  );
+};
 
 const Analytics = ({
-  scholarships,
-  applications,
-  aidApplications,
-  users
+  scholarships = [],
+  applications = [],
+  aidApplications = [],
+  users = []
 }) => {
-  // Calculate analytics data
+  const applicationCounts = useMemo(() => getStatusCounts(applications), [applications]);
+  const aidApplicationCounts = useMemo(() => getStatusCounts(aidApplications), [aidApplications]);
+
   const totalScholarships = scholarships.length;
   const totalApplications = applications.length;
   const totalAidApplications = aidApplications.length;
-  const totalUsers = users.length;
 
-  const approvedApplications = applications.filter(app => app.status === "Approved").length;
-  const pendingApplications = applications.filter(app => app.status === "Pending").length;
-  const rejectedApplications = applications.filter(app => app.status === "Rejected").length;
+  const inferredUsersCount = useMemo(() => {
+    if (users.length > 0) {
+      return users.length;
+    }
 
-  const approvedAidApplications = aidApplications.filter(app => app.status === "Approved").length;
-  const pendingAidApplications = aidApplications.filter(app => app.status === "Pending").length;
-  const rejectedAidApplications = aidApplications.filter(app => app.status === "Rejected").length;
+    const uniqueUsers = new Set();
 
-  const approvalRate = totalApplications > 0 ? ((approvedApplications / totalApplications) * 100).toFixed(1) : 0;
-  const aidApprovalRate = totalAidApplications > 0 ? ((approvedAidApplications / totalAidApplications) * 100).toFixed(1) : 0;
+    [...applications, ...aidApplications].forEach((application) => {
+      const studentId = application?.student?.id;
+      const studentEmail = application?.student?.email;
+      const studentName = application?.student?.name;
+      const identity = studentId || studentEmail || studentName;
 
+      if (identity) {
+        uniqueUsers.add(identity);
+      }
+    });
 
+    return uniqueUsers.size;
+  }, [users, applications, aidApplications]);
+
+  const approvalRate = totalApplications > 0
+    ? ((applicationCounts.approved / totalApplications) * 100).toFixed(1)
+    : "0.0";
+
+  const aidApprovalRate = totalAidApplications > 0
+    ? ((aidApplicationCounts.approved / totalAidApplications) * 100).toFixed(1)
+    : "0.0";
+
+  const averageApplicationsPerUser = inferredUsersCount > 0
+    ? (totalApplications / inferredUsersCount).toFixed(1)
+    : "0.0";
+
+  const scholarshipCategoryData = useMemo(() => {
+    const counts = scholarships.reduce((acc, scholarship) => {
+      const category = scholarship?.category || "Uncategorized";
+      acc[category] = (acc[category] || 0) + 1;
+      return acc;
+    }, {});
+
+    return Object.entries(counts)
+      .map(([label, value]) => ({ label, value }))
+      .sort((a, b) => b.value - a.value);
+  }, [scholarships]);
+
+  const renderStatusRow = (label, color, count, total) => (
+    <div style={styles.statusItem}>
+      <div style={styles.statusBar}>
+        <div
+          style={{
+            ...styles.statusFill,
+            background: color,
+            width: `${total > 0 ? (count / total) * 100 : 0}%`
+          }}
+        />
+      </div>
+      <div style={styles.statusLabel}>
+        <span style={{color}}>{label}</span>
+        <span style={{fontWeight: "600"}}>{count}</span>
+      </div>
+    </div>
+  );
 
   return (
     <>
@@ -36,8 +108,8 @@ const Analytics = ({
         <div style={styles.statCard}>
           <div style={styles.statIcon}>🎓</div>
           <div style={styles.statContent}>
-            <h3 style={{margin: 0, fontSize: "24px", fontWeight: "700"}}>{totalUsers}</h3>
-            <p style={{margin: "5px 0 0 0", color: "#666", fontSize: "14px"}}>Total Users</p>
+            <h3 style={{margin: 0, fontSize: "24px", fontWeight: "700"}}>{inferredUsersCount}</h3>
+            <p style={{margin: "5px 0 0 0", color: "#666", fontSize: "14px"}}>Active Applicants</p>
           </div>
         </div>
 
@@ -53,7 +125,7 @@ const Analytics = ({
           <div style={styles.statIcon}>📝</div>
           <div style={styles.statContent}>
             <h3 style={{margin: 0, fontSize: "24px", fontWeight: "700"}}>{totalApplications}</h3>
-            <p style={{margin: "5px 0 0 0", color: "#666", fontSize: "14px"}}>Applications</p>
+            <p style={{margin: "5px 0 0 0", color: "#666", fontSize: "14px"}}>Scholarship Applications</p>
           </div>
         </div>
 
@@ -70,106 +142,18 @@ const Analytics = ({
         <div style={styles.chartCard}>
           <h3 style={{margin: "0 0 20px 0", fontSize: "18px", fontWeight: "600"}}>Application Status Distribution</h3>
           <div style={styles.statusChart}>
-            <div style={styles.statusItem}>
-              <div style={styles.statusBar}>
-                <div
-                  style={{
-                    ...styles.statusFill,
-                    background: "#10b981",
-                    width: `${totalApplications > 0 ? (approvedApplications / totalApplications) * 100 : 0}%`
-                  }}
-                ></div>
-              </div>
-              <div style={styles.statusLabel}>
-                <span style={{color: "#10b981"}}>Approved</span>
-                <span style={{fontWeight: "600"}}>{approvedApplications}</span>
-              </div>
-            </div>
-
-            <div style={styles.statusItem}>
-              <div style={styles.statusBar}>
-                <div
-                  style={{
-                    ...styles.statusFill,
-                    background: "#f59e0b",
-                    width: `${totalApplications > 0 ? (pendingApplications / totalApplications) * 100 : 0}%`
-                  }}
-                ></div>
-              </div>
-              <div style={styles.statusLabel}>
-                <span style={{color: "#f59e0b"}}>Pending</span>
-                <span style={{fontWeight: "600"}}>{pendingApplications}</span>
-              </div>
-            </div>
-
-            <div style={styles.statusItem}>
-              <div style={styles.statusBar}>
-                <div
-                  style={{
-                    ...styles.statusFill,
-                    background: "#ef4444",
-                    width: `${totalApplications > 0 ? (rejectedApplications / totalApplications) * 100 : 0}%`
-                  }}
-                ></div>
-              </div>
-              <div style={styles.statusLabel}>
-                <span style={{color: "#ef4444"}}>Rejected</span>
-                <span style={{fontWeight: "600"}}>{rejectedApplications}</span>
-              </div>
-            </div>
+            {renderStatusRow("Approved", "#10b981", applicationCounts.approved, totalApplications)}
+            {renderStatusRow("Pending", "#f59e0b", applicationCounts.pending, totalApplications)}
+            {renderStatusRow("Rejected", "#ef4444", applicationCounts.rejected, totalApplications)}
           </div>
         </div>
 
         <div style={styles.chartCard}>
           <h3 style={{margin: "0 0 20px 0", fontSize: "18px", fontWeight: "600"}}>Financial Aid Status Distribution</h3>
           <div style={styles.statusChart}>
-            <div style={styles.statusItem}>
-              <div style={styles.statusBar}>
-                <div
-                  style={{
-                    ...styles.statusFill,
-                    background: "#10b981",
-                    width: `${totalAidApplications > 0 ? (approvedAidApplications / totalAidApplications) * 100 : 0}%`
-                  }}
-                ></div>
-              </div>
-              <div style={styles.statusLabel}>
-                <span style={{color: "#10b981"}}>Approved</span>
-                <span style={{fontWeight: "600"}}>{approvedAidApplications}</span>
-              </div>
-            </div>
-
-            <div style={styles.statusItem}>
-              <div style={styles.statusBar}>
-                <div
-                  style={{
-                    ...styles.statusFill,
-                    background: "#f59e0b",
-                    width: `${totalAidApplications > 0 ? (pendingAidApplications / totalAidApplications) * 100 : 0}%`
-                  }}
-                ></div>
-              </div>
-              <div style={styles.statusLabel}>
-                <span style={{color: "#f59e0b"}}>Pending</span>
-                <span style={{fontWeight: "600"}}>{pendingAidApplications}</span>
-              </div>
-            </div>
-
-            <div style={styles.statusItem}>
-              <div style={styles.statusBar}>
-                <div
-                  style={{
-                    ...styles.statusFill,
-                    background: "#ef4444",
-                    width: `${totalAidApplications > 0 ? (rejectedAidApplications / totalAidApplications) * 100 : 0}%`
-                  }}
-                ></div>
-              </div>
-              <div style={styles.statusLabel}>
-                <span style={{color: "#ef4444"}}>Rejected</span>
-                <span style={{fontWeight: "600"}}>{rejectedAidApplications}</span>
-              </div>
-            </div>
+            {renderStatusRow("Approved", "#10b981", aidApplicationCounts.approved, totalAidApplications)}
+            {renderStatusRow("Pending", "#f59e0b", aidApplicationCounts.pending, totalAidApplications)}
+            {renderStatusRow("Rejected", "#ef4444", aidApplicationCounts.rejected, totalAidApplications)}
           </div>
         </div>
       </div>
@@ -194,9 +178,27 @@ const Analytics = ({
         <div style={styles.metricCard}>
           <h4 style={{margin: "0 0 10px 0", fontSize: "16px", fontWeight: "600"}}>Average Applications per User</h4>
           <div style={styles.metricValue}>
-            <span style={{fontSize: "32px", fontWeight: "700", color: "#8b5cf6"}}>{totalUsers > 0 ? (totalApplications / totalUsers).toFixed(1) : 0}</span>
+            <span style={{fontSize: "32px", fontWeight: "700", color: "#8b5cf6"}}>{averageApplicationsPerUser}</span>
             <span style={{fontSize: "14px", color: "#666", marginLeft: "10px"}}>applications per user</span>
           </div>
+        </div>
+      </div>
+
+      <div style={styles.breakdownSection}>
+        <div style={styles.chartCard}>
+          <h3 style={{margin: "0 0 20px 0", fontSize: "18px", fontWeight: "600"}}>Scholarship Categories</h3>
+          {scholarshipCategoryData.length > 0 ? (
+            <div style={styles.categoryList}>
+              {scholarshipCategoryData.map((item) => (
+                <div key={item.label} style={styles.categoryRow}>
+                  <span style={styles.categoryName}>{item.label}</span>
+                  <span style={styles.categoryValue}>{item.value}</span>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div style={styles.emptyState}>No scholarship data available yet.</div>
+          )}
         </div>
       </div>
     </>
@@ -282,7 +284,8 @@ const styles = {
   metricsSection: {
     display: "grid",
     gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))",
-    gap: "20px"
+    gap: "20px",
+    marginBottom: "40px"
   },
   metricCard: {
     background: "white",
@@ -294,7 +297,41 @@ const styles = {
   metricValue: {
     display: "flex",
     alignItems: "baseline",
-    gap: "10px"
+    gap: "10px",
+    flexWrap: "wrap"
+  },
+  breakdownSection: {
+    display: "grid",
+    gridTemplateColumns: "1fr"
+  },
+  categoryList: {
+    display: "flex",
+    flexDirection: "column",
+    gap: "12px"
+  },
+  categoryRow: {
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
+    padding: "12px 14px",
+    background: "#f8fafc",
+    borderRadius: "10px",
+    border: "1px solid #e2e8f0"
+  },
+  categoryName: {
+    color: "#334155",
+    fontWeight: "500"
+  },
+  categoryValue: {
+    color: "#1e293b",
+    fontWeight: "700"
+  },
+  emptyState: {
+    padding: "18px",
+    borderRadius: "10px",
+    background: "#f8fafc",
+    color: "#64748b",
+    border: "1px dashed #cbd5e1"
   }
 };
 
