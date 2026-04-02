@@ -1,5 +1,23 @@
 import React, { useState } from "react";
 
+const isDeadlinePassed = (deadline) => {
+  if (!deadline) {
+    return false;
+  }
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  const deadlineDate = new Date(deadline);
+
+  if (Number.isNaN(deadlineDate.getTime())) {
+    return false;
+  }
+
+  deadlineDate.setHours(0, 0, 0, 0);
+  return deadlineDate < today;
+};
+
 const FinancialAid = ({ financialAid, handleInterestedAid, aidApplications }) => {
   const [showModal, setShowModal] = useState(false);
   const [selectedAid, setSelectedAid] = useState(null);
@@ -11,6 +29,11 @@ const FinancialAid = ({ financialAid, handleInterestedAid, aidApplications }) =>
   };
 
   const handleInterestedClick = (aid) => {
+    if (isDeadlinePassed(aid.deadline)) {
+      alert("This financial aid deadline is over. You can no longer apply.");
+      return;
+    }
+
     setSelectedAid(aid);
     setShowModal(true);
   };
@@ -21,10 +44,13 @@ const FinancialAid = ({ financialAid, handleInterestedAid, aidApplications }) =>
       return;
     }
 
-    await handleInterestedAid(selectedAid, description);
-    setShowModal(false);
-    setDescription("");
-    setSelectedAid(null);
+    const submitted = await handleInterestedAid(selectedAid, description);
+
+    if (submitted) {
+      setShowModal(false);
+      setDescription("");
+      setSelectedAid(null);
+    }
   };
 
   const handleCloseModal = () => {
@@ -48,7 +74,10 @@ const FinancialAid = ({ financialAid, handleInterestedAid, aidApplications }) =>
         </div>
       ) : (
         <div style={styles.aidGrid}>
-          {financialAid.map((aid) => (
+          {financialAid.map((aid) => {
+            const isExpired = isDeadlinePassed(aid.deadline);
+
+            return (
             <div key={aid.id} style={styles.aidCard}>
               <div style={styles.aidCardHeader}>
                 <h3 style={{ margin: "0 0 8px 0" }}>{aid.title}</h3>
@@ -79,6 +108,13 @@ const FinancialAid = ({ financialAid, handleInterestedAid, aidApplications }) =>
                 </div>
               )}
 
+              {aid.deadline && (
+                <div style={styles.aidInfo}>
+                  <strong>Deadline:</strong>
+                  <p style={{ margin: "8px 0 0 0", fontSize: "13px" }}>{aid.deadline}</p>
+                </div>
+              )}
+
               {aid.requirements && (
                 <div style={styles.aidInfo}>
                   <strong>Requirements:</strong>
@@ -103,6 +139,13 @@ const FinancialAid = ({ financialAid, handleInterestedAid, aidApplications }) =>
                   >
                     Interest Expressed: {status}
                   </div>
+                ) : isExpired ? (
+                  <button
+                    style={{ ...styles.interestedBtn, ...styles.disabledInterestedBtn }}
+                    disabled
+                  >
+                    Deadline Over
+                  </button>
                 ) : (
                   <button
                     style={styles.interestedBtn}
@@ -113,7 +156,8 @@ const FinancialAid = ({ financialAid, handleInterestedAid, aidApplications }) =>
                 );
               })()}
             </div>
-          ))}
+            );
+          })}
         </div>
       )}
 
@@ -201,6 +245,11 @@ const styles = {
     fontWeight: "600",
     marginTop: "15px",
     transition: "all 0.3s ease"
+  },
+  disabledInterestedBtn: {
+    background: "#cbd5e1",
+    color: "#475569",
+    cursor: "not-allowed"
   },
   modalOverlay: {
     position: "fixed",

@@ -40,6 +40,24 @@ const normalizeStudentProfile = (profile, email = "", fullName = "") => {
   };
 };
 
+const isDeadlinePassed = (deadline) => {
+  if (!deadline) {
+    return false;
+  }
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  const deadlineDate = new Date(deadline);
+
+  if (Number.isNaN(deadlineDate.getTime())) {
+    return false;
+  }
+
+  deadlineDate.setHours(0, 0, 0, 0);
+  return deadlineDate < today;
+};
+
 function StudentDashboard() {
   const [active, setActive] = useState("explore");
   const [scholarships, setScholarships] = useState([]);
@@ -193,12 +211,17 @@ function StudentDashboard() {
 
     if (alreadyApplied) {
       alert("You already applied for this scholarship!");
-      return;
+      return false;
+    }
+
+    if (isDeadlinePassed(scholarship?.deadline)) {
+      alert("This scholarship deadline is over. You can no longer apply.");
+      return false;
     }
 
     if (!studentId) {
       alert("Student not found. Please login again.");
-      return;
+      return false;
     }
 
     try {
@@ -210,14 +233,16 @@ function StudentDashboard() {
 
       if (!response.success) {
         alert(response.message || "Failed to submit application");
-        return;
+        return false;
       }
 
       setApplications((prev) => [...prev, response.data]);
       alert(response.message || "Application submitted successfully!");
+      return true;
     } catch (err) {
       console.error("Error applying for scholarship:", err);
       alert(err.message || "Failed to submit application");
+      return false;
     }
   };
 
@@ -226,12 +251,17 @@ function StudentDashboard() {
 
     if (alreadyInterested) {
       alert("You already expressed interest in this financial aid!");
-      return;
+      return false;
+    }
+
+    if (isDeadlinePassed(aid?.deadline)) {
+      alert("This financial aid deadline is over. You can no longer apply.");
+      return false;
     }
 
     if (!studentId) {
       alert("Student not found. Please login again.");
-      return;
+      return false;
     }
 
     try {
@@ -243,14 +273,16 @@ function StudentDashboard() {
 
       if (!response.success) {
         alert(response.message || "Failed to submit financial aid application");
-        return;
+        return false;
       }
 
       setAidApplications((prev) => [...prev, response.data]);
       alert(response.message || "Interest expressed successfully!");
+      return true;
     } catch (err) {
       console.error("Error applying for financial aid:", err);
       alert(err.message || "Failed to submit financial aid application");
+      return false;
     }
   };
 

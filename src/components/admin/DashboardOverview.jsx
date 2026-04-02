@@ -6,7 +6,8 @@ const DashboardOverview = ({
   applications,
   aidApplications,
   overallStatusCounts,
-  aidStatusCounts
+  aidStatusCounts,
+  setActive
 }) => {
   return (
     <>
@@ -22,7 +23,7 @@ const DashboardOverview = ({
             <p style={styles.statLabel}>Scholarships</p>
             <p style={styles.statValue}>{scholarships.length}</p>
           </div>
-          <div style={styles.statTrend}>↑ Active</div>
+          <div style={styles.statTrend}>Active</div>
         </div>
 
         <div style={styles.statCard}>
@@ -40,7 +41,7 @@ const DashboardOverview = ({
             <p style={styles.statLabel}>Applications</p>
             <p style={styles.statValue}>{applications.length}</p>
           </div>
-          <div style={styles.statTrend}>↑ Growing</div>
+          <div style={styles.statTrend}>Growing</div>
         </div>
 
         <div style={styles.statCard}>
@@ -83,22 +84,22 @@ const DashboardOverview = ({
       <div style={styles.quickActions}>
         <h3>Quick Actions</h3>
         <div style={styles.actionsGrid}>
-          <button style={styles.actionBtn} onClick={() => window.location.hash = '#scholarships'}>
+          <button style={styles.actionBtn} onClick={() => setActive("scholarships")}>
             ➕ Add Scholarship
           </button>
-          <button style={styles.actionBtn} onClick={() => window.location.hash = '#financial-aid'}>
+          <button style={styles.actionBtn} onClick={() => setActive("financial-aid")}>
             💰 Add Financial Aid
           </button>
-          <button style={styles.actionBtn} onClick={() => window.location.hash = '#applications'}>
+          <button style={styles.actionBtn} onClick={() => setActive("applications")}>
             📋 View Applications
           </button>
-          <button style={styles.actionBtn} onClick={() => window.location.hash = '#aid-applications'}>
+          <button style={styles.actionBtn} onClick={() => setActive("aid-applications")}>
             💳 View Aid Applications
           </button>
-          <button style={styles.actionBtn} onClick={() => window.location.hash = '#analytics'}>
+          <button style={styles.actionBtn} onClick={() => setActive("analytics")}>
             📊 Analytics
           </button>
-          <button style={styles.actionBtn} onClick={() => window.location.hash = '#profile'}>
+          <button style={styles.actionBtn} onClick={() => setActive("profile")}>
             👤 My Profile
           </button>
         </div>

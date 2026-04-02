@@ -107,7 +107,7 @@ const Profile = ({
           <div style={{display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "30px"}}>
             <div>
               <h2 style={{margin: "0 0 8px 0", fontSize: "32px", fontWeight: "700", color: "#1e293b"}}>
-                👋 {studentProfile.fullName || "Student"}
+                👤 {studentProfile.fullName || "Student"}
               </h2>
               <p style={{margin: "0 0 3px 0", color: "#64748b", fontSize: "14px"}}>
                 📧 {getDisplayValue(studentProfile.email)}

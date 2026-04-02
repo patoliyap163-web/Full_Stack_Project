@@ -1,5 +1,23 @@
 import React, { useState } from "react";
 
+const isDeadlinePassed = (deadline) => {
+  if (!deadline) {
+    return false;
+  }
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  const deadlineDate = new Date(deadline);
+
+  if (Number.isNaN(deadlineDate.getTime())) {
+    return false;
+  }
+
+  deadlineDate.setHours(0, 0, 0, 0);
+  return deadlineDate < today;
+};
+
 const ExploreScholarships = ({
   scholarships,
   applications,
@@ -39,6 +57,11 @@ const ExploreScholarships = ({
   });
 
   const handleApplyClick = (item) => {
+    if (isDeadlinePassed(item.deadline)) {
+      alert("This scholarship deadline is over. You can no longer apply.");
+      return;
+    }
+
     setSelectedScholarship(item);
     setShowModal(true);
   };
@@ -49,10 +72,13 @@ const ExploreScholarships = ({
       return;
     }
 
-    await handleApply(selectedScholarship, description);
-    setShowModal(false);
-    setDescription("");
-    setSelectedScholarship(null);
+    const submitted = await handleApply(selectedScholarship, description);
+
+    if (submitted) {
+      setShowModal(false);
+      setDescription("");
+      setSelectedScholarship(null);
+    }
   };
 
   const handleCloseModal = () => {
@@ -108,6 +134,7 @@ const ExploreScholarships = ({
         <div style={styles.scholarshipsGrid}>
           {filteredScholarships.map((item) => {
             const status = getStatus(item.id);
+            const isExpired = isDeadlinePassed(item.deadline);
 
             return (
               <div key={item.id} style={styles.scholarshipCard}>
@@ -153,6 +180,13 @@ const ExploreScholarships = ({
                   }}>
                     Applied: {status}
                   </div>
+                ) : isExpired ? (
+                  <button
+                    style={{ ...styles.applyBtn, ...styles.disabledApplyBtn }}
+                    disabled
+                  >
+                    Deadline Over
+                  </button>
                 ) : (
                   <button
                     style={styles.applyBtn}
@@ -270,6 +304,11 @@ const styles = {
     fontWeight: "600",
     marginTop: "15px",
     transition: "all 0.3s ease"
+  },
+  disabledApplyBtn: {
+    background: "#cbd5e1",
+    cursor: "not-allowed",
+    color: "#475569"
   },
   emptyState: {
     textAlign: "center",
