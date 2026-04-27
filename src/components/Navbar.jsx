@@ -1,34 +1,33 @@
 import { Link } from "react-router-dom";
 import { useState, useEffect } from "react";
+import { authService } from "../services/authService";
 
 function Navbar() {
   const [hover, setHover] = useState(null);
   const [user, setUser] = useState(() => {
-    const stored = sessionStorage.getItem("user");
-    return stored ? JSON.parse(stored) : null;
+    return authService.getUser();
   });
 
   useEffect(() => {
-    // Update user state when sessionStorage changes
+    // Update user state when auth changes
     const handleStorageChange = () => {
-      const stored = sessionStorage.getItem("user");
-      const parsed = stored ? JSON.parse(stored) : null;
+      const currentUser = authService.getUser();
       setUser((prev) => {
-        if (!prev && !parsed) return prev;
-        if (prev && parsed && prev.id === parsed.id && prev.role === parsed.role && prev.email === parsed.email) {
+        if (!prev && !currentUser) return prev;
+        if (prev && currentUser && prev.id === currentUser.id && prev.role === currentUser.role && prev.email === currentUser.email) {
           return prev;
         }
-        return parsed;
+        return currentUser;
       });
     };
 
-    // Listen for custom event from login/register
+    // Listen for custom event from login/logout
     window.addEventListener("userChanged", handleStorageChange);
 
     // Listen for storage changes (works across tabs/windows)
     window.addEventListener("storage", handleStorageChange);
 
-    // Also check sessionStorage on window focus (in case user logs in from another tab)
+    // Also check auth on window focus (in case user logs in from another tab)
     window.addEventListener("focus", handleStorageChange);
 
     return () => {
@@ -39,8 +38,8 @@ function Navbar() {
   }, []);
 
   const handleLogout = () => {
-    // Clear the user object from sessionStorage
-    sessionStorage.removeItem("user");
+    // Use authService to logout (clears token and user data, dispatches event)
+    authService.logout();
     // Update the user state immediately
     setUser(null);
     // Force full navigation to home to ensure landing on Home

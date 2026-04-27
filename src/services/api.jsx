@@ -1,4 +1,6 @@
 // API service functions
+import { authService } from "./authService";
+import apiCall from "./apiClient";
 
 const API_BASE_URL = "http://localhost:8080";
 
@@ -24,7 +26,18 @@ export const loginUser = async (email, password) => {
       body: JSON.stringify({ email, password }),
     });
 
-    return await parseResponse(response, "Login failed");
+    const data = await parseResponse(response, "Login failed");
+
+    if (data.token) {
+      console.log("🔐 Login successful - storing token:", `${data.token.substring(0, 20)}...`);
+      authService.setToken(data.token);
+      authService.setUser(data.data);
+      console.log("✅ Token and user stored in sessionStorage");
+    } else {
+      console.log("❌ No token received in login response");
+    }
+
+    return data;
   } catch (error) {
     console.error("Error logging in:", error);
     throw error;
@@ -49,17 +62,15 @@ export const registerUser = async (name, email, password, role) => {
   }
 };
 
+// Generic API call with JWT interceptor
+export const apiRequest = apiCall;
+
 // Function to get all scholarships
 export const getScholarships = async () => {
   try {
-    const response = await fetch(`${API_BASE_URL}/api/scholarships`, {
+    return await apiCall("/api/scholarships", {
       method: "GET",
-      headers: {
-        "Content-Type": "application/json",
-      },
     });
-
-    return await parseResponse(response, "Failed to fetch scholarships");
   } catch (error) {
     console.error("Error fetching scholarships:", error);
     throw error;
@@ -69,15 +80,10 @@ export const getScholarships = async () => {
 // Function to create a scholarship
 export const createScholarship = async (scholarshipData) => {
   try {
-    const response = await fetch(`${API_BASE_URL}/api/scholarships`, {
+    return await apiCall("/api/scholarships", {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(scholarshipData),
+      body: scholarshipData,
     });
-
-    return await parseResponse(response, "Failed to create scholarship");
   } catch (error) {
     console.error("Error creating scholarship:", error);
     throw error;
@@ -87,15 +93,10 @@ export const createScholarship = async (scholarshipData) => {
 // Function to update a scholarship
 export const updateScholarship = async (id, scholarshipData) => {
   try {
-    const response = await fetch(`${API_BASE_URL}/api/scholarships/${id}`, {
+    return await apiCall(`/api/scholarships/${id}`, {
       method: "PUT",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(scholarshipData),
+      body: scholarshipData,
     });
-
-    return await parseResponse(response, "Failed to update scholarship");
   } catch (error) {
     console.error("Error updating scholarship:", error);
     throw error;
@@ -105,14 +106,9 @@ export const updateScholarship = async (id, scholarshipData) => {
 // Function to delete a scholarship
 export const deleteScholarship = async (id) => {
   try {
-    const response = await fetch(`${API_BASE_URL}/api/scholarships/${id}`, {
+    return await apiCall(`/api/scholarships/${id}`, {
       method: "DELETE",
-      headers: {
-        "Content-Type": "application/json",
-      },
     });
-
-    return await parseResponse(response, "Failed to delete scholarship");
   } catch (error) {
     console.error("Error deleting scholarship:", error);
     throw error;
@@ -122,14 +118,9 @@ export const deleteScholarship = async (id) => {
 // Function to get scholarships for a specific admin
 export const getScholarshipsByAdmin = async (adminId) => {
   try {
-    const response = await fetch(`${API_BASE_URL}/api/scholarships/admin/${adminId}`, {
+    return await apiCall(`/api/scholarships/admin/${adminId}`, {
       method: "GET",
-      headers: {
-        "Content-Type": "application/json",
-      },
     });
-
-    return await parseResponse(response, "Failed to fetch admin scholarships");
   } catch (error) {
     console.error("Error fetching admin scholarships:", error);
     throw error;
@@ -139,14 +130,9 @@ export const getScholarshipsByAdmin = async (adminId) => {
 // Function to get all financial aid
 export const getFinancialAid = async () => {
   try {
-    const response = await fetch(`${API_BASE_URL}/api/financial-aid`, {
+    return await apiCall("/api/financial-aid", {
       method: "GET",
-      headers: {
-        "Content-Type": "application/json",
-      },
     });
-
-    return await parseResponse(response, "Failed to fetch financial aid");
   } catch (error) {
     console.error("Error fetching financial aid:", error);
     throw error;
@@ -156,14 +142,9 @@ export const getFinancialAid = async () => {
 // Function to get financial aid by id
 export const getFinancialAidById = async (id) => {
   try {
-    const response = await fetch(`${API_BASE_URL}/api/financial-aid/${id}`, {
+    return await apiCall(`/api/financial-aid/${id}`, {
       method: "GET",
-      headers: {
-        "Content-Type": "application/json",
-      },
     });
-
-    return await parseResponse(response, "Failed to fetch financial aid");
   } catch (error) {
     console.error("Error fetching financial aid by id:", error);
     throw error;
@@ -173,15 +154,10 @@ export const getFinancialAidById = async (id) => {
 // Function to create financial aid
 export const createFinancialAid = async (financialAidData) => {
   try {
-    const response = await fetch(`${API_BASE_URL}/api/financial-aid`, {
+    return await apiCall("/api/financial-aid", {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(financialAidData),
+      body: financialAidData,
     });
-
-    return await parseResponse(response, "Failed to create financial aid");
   } catch (error) {
     console.error("Error creating financial aid:", error);
     throw error;
@@ -191,15 +167,10 @@ export const createFinancialAid = async (financialAidData) => {
 // Function to update financial aid
 export const updateFinancialAid = async (id, financialAidData) => {
   try {
-    const response = await fetch(`${API_BASE_URL}/api/financial-aid/${id}`, {
+    return await apiCall(`/api/financial-aid/${id}`, {
       method: "PUT",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(financialAidData),
+      body: financialAidData,
     });
-
-    return await parseResponse(response, "Failed to update financial aid");
   } catch (error) {
     console.error("Error updating financial aid:", error);
     throw error;
@@ -209,14 +180,9 @@ export const updateFinancialAid = async (id, financialAidData) => {
 // Function to delete financial aid
 export const deleteFinancialAid = async (id) => {
   try {
-    const response = await fetch(`${API_BASE_URL}/api/financial-aid/${id}`, {
+    return await apiCall(`/api/financial-aid/${id}`, {
       method: "DELETE",
-      headers: {
-        "Content-Type": "application/json",
-      },
     });
-
-    return await parseResponse(response, "Failed to delete financial aid");
   } catch (error) {
     console.error("Error deleting financial aid:", error);
     throw error;
@@ -226,14 +192,9 @@ export const deleteFinancialAid = async (id) => {
 // Function to get financial aid for a specific admin
 export const getFinancialAidByAdmin = async (adminId) => {
   try {
-    const response = await fetch(`${API_BASE_URL}/api/financial-aid/admin/${adminId}`, {
+    return await apiCall(`/api/financial-aid/admin/${adminId}`, {
       method: "GET",
-      headers: {
-        "Content-Type": "application/json",
-      },
     });
-
-    return await parseResponse(response, "Failed to fetch admin financial aid");
   } catch (error) {
     console.error("Error fetching admin financial aid:", error);
     throw error;
@@ -243,14 +204,9 @@ export const getFinancialAidByAdmin = async (adminId) => {
 // Function to get applications for a specific student
 export const getApplicationsByStudent = async (studentId) => {
   try {
-    const response = await fetch(`${API_BASE_URL}/api/application/student/${studentId}`, {
+    return await apiCall(`/api/application/student/${studentId}`, {
       method: "GET",
-      headers: {
-        "Content-Type": "application/json",
-      },
     });
-
-    return await parseResponse(response, "Failed to fetch student applications");
   } catch (error) {
     console.error("Error fetching student applications:", error);
     throw error;
@@ -260,14 +216,9 @@ export const getApplicationsByStudent = async (studentId) => {
 // Function to get applications for a specific admin
 export const getApplicationsByAdmin = async (adminId) => {
   try {
-    const response = await fetch(`${API_BASE_URL}/api/application/admin/${adminId}`, {
+    return await apiCall(`/api/application/admin/${adminId}`, {
       method: "GET",
-      headers: {
-        "Content-Type": "application/json",
-      },
     });
-
-    return await parseResponse(response, "Failed to fetch admin applications");
   } catch (error) {
     console.error("Error fetching admin applications:", error);
     throw error;
@@ -277,15 +228,10 @@ export const getApplicationsByAdmin = async (adminId) => {
 // Function to create a scholarship application
 export const createApplication = async (applicationData) => {
   try {
-    const response = await fetch(`${API_BASE_URL}/api/application`, {
+    return await apiCall("/api/application", {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(applicationData),
+      body: applicationData,
     });
-
-    return await parseResponse(response, "Failed to submit application");
   } catch (error) {
     console.error("Error creating application:", error);
     throw error;
@@ -295,15 +241,10 @@ export const createApplication = async (applicationData) => {
 // Function to update application status
 export const updateApplicationStatusById = async (id, status) => {
   try {
-    const response = await fetch(`${API_BASE_URL}/api/application/${id}/status`, {
+    return await apiCall(`/api/application/${id}/status`, {
       method: "PUT",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ status }),
+      body: { status },
     });
-
-    return await parseResponse(response, "Failed to update application status");
   } catch (error) {
     console.error("Error updating application status:", error);
     throw error;
@@ -313,18 +254,15 @@ export const updateApplicationStatusById = async (id, status) => {
 // Function to get student profile by user id
 export const getStudentProfileByUserId = async (userId) => {
   try {
-    const response = await fetch(`${API_BASE_URL}/student-profile/${userId}`, {
+    const response = await apiCall(`/student-profile/${userId}`, {
       method: "GET",
-      headers: {
-        "Content-Type": "application/json",
-      },
     });
 
     if (response.status === 404 || response.status === 204) {
       return { success: true, data: {} };
     }
 
-    return await parseResponse(response, "Failed to fetch student profile");
+    return response;
   } catch (error) {
     console.error("Error fetching student profile:", error);
     throw error;
@@ -334,15 +272,10 @@ export const getStudentProfileByUserId = async (userId) => {
 // Function to update student profile by user id
 export const updateStudentProfileByUserId = async (userId, profileData) => {
   try {
-    const response = await fetch(`${API_BASE_URL}/student-profile/${userId}`, {
+    return await apiCall(`/student-profile/${userId}`, {
       method: "PUT",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(profileData),
+      body: profileData,
     });
-
-    return await parseResponse(response, "Failed to update student profile");
   } catch (error) {
     console.error("Error updating student profile:", error);
     throw error;
@@ -352,18 +285,15 @@ export const updateStudentProfileByUserId = async (userId, profileData) => {
 // Function to get admin profile by user id
 export const getAdminProfileByUserId = async (userId) => {
   try {
-    const response = await fetch(`${API_BASE_URL}/admin-profile/${userId}`, {
+    const response = await apiCall(`/admin-profile/${userId}`, {
       method: "GET",
-      headers: {
-        "Content-Type": "application/json",
-      },
     });
 
     if (response.status === 404 || response.status === 204) {
       return { success: true, data: {} };
     }
 
-    return await parseResponse(response, "Failed to fetch admin profile");
+    return response;
   } catch (error) {
     console.error("Error fetching admin profile:", error);
     throw error;
@@ -373,15 +303,10 @@ export const getAdminProfileByUserId = async (userId) => {
 // Function to update admin profile by user id
 export const updateAdminProfileByUserId = async (userId, profileData) => {
   try {
-    const response = await fetch(`${API_BASE_URL}/admin-profile/${userId}`, {
+    return await apiCall(`/admin-profile/${userId}`, {
       method: "PUT",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(profileData),
+      body: profileData,
     });
-
-    return await parseResponse(response, "Failed to update admin profile");
   } catch (error) {
     console.error("Error updating admin profile:", error);
     throw error;

@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { loginUser } from "../services/api";
+import { authService } from "../services/authService";
 
 function Login() {
   const navigate = useNavigate();
@@ -50,9 +51,7 @@ function Login() {
         role: String(userData.role || "").toLowerCase()
       };
 
-      // Save logged-in user in sessionStorage
-      sessionStorage.setItem("user", JSON.stringify(user));
-
+      // User data and token are already saved in authService by loginUser function
       // Dispatch custom event to notify Navbar component
       window.dispatchEvent(new Event("userChanged"));
 

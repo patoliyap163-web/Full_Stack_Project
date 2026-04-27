@@ -1,9 +1,9 @@
 import { Navigate } from "react-router-dom";
+import { authService } from "../services/authService";
 
 function PublicRoute({ children }) {
-  // Get the user object
-  const stored = sessionStorage.getItem("user");
-  const user = stored ? JSON.parse(stored) : null;
+  // Get the user object from authService
+  const user = authService.getUser();
 
   if (user) {
     // User is logged in, redirect to appropriate dashboard

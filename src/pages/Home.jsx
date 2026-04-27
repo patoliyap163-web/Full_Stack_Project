@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import ScholarshipCard from "../components/ScholarshipCard";
 import { getScholarships } from "../services/api";
+import { authService } from "../services/authService";
 
 function Home() {
   const navigate = useNavigate();
@@ -11,11 +12,30 @@ function Home() {
   const [scholarships, setScholarships] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [user, setUser] = useState(() => authService.getUser());
+
+  useEffect(() => {
+    // Listen for auth changes
+    const handleAuthChange = () => {
+      setUser(authService.getUser());
+    };
+
+    window.addEventListener("userChanged", handleAuthChange);
+    return () => window.removeEventListener("userChanged", handleAuthChange);
+  }, []);
 
   useEffect(() => {
     const fetchScholarships = async () => {
+      // Only fetch scholarships if user is authenticated
+      if (!authService.isAuthenticated()) {
+        setLoading(false);
+        setError("Please login to view available scholarships");
+        return;
+      }
+
       try {
         setLoading(true);
+        setError(null);
         const response = await getScholarships();
         if (response.success) {
           setScholarships(response.data || []);
@@ -24,7 +44,9 @@ function Home() {
         }
       } catch (err) {
         console.error("Error fetching scholarships:", err);
-        if (err.message.includes("<!DOCTYPE")) {
+        if (err.message.includes("403") || err.message.includes("Forbidden")) {
+          setError("Authentication required. Please login to view scholarships.");
+        } else if (err.message.includes("<!DOCTYPE")) {
           setError("Backend service is currently unavailable. Please try again later.");
         } else {
           setError(err.message || "Failed to load scholarships");
@@ -35,7 +57,7 @@ function Home() {
     };
 
     fetchScholarships();
-  }, []);
+  }, [user]); // Re-fetch when user changes
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -153,12 +175,21 @@ function Home() {
           ) : error ? (
             <div style={styles.errorContainer}>
               <p style={styles.errorText}>❌ {error}</p>
-              <button
-                style={styles.retryBtn}
-                onClick={() => window.location.reload()}
-              >
-                Try Again
-              </button>
+              {error.includes("Please login") || error.includes("Authentication required") ? (
+                <button
+                  style={styles.loginBtn}
+                  onClick={() => navigate("/login")}
+                >
+                  Login to View Scholarships
+                </button>
+              ) : (
+                <button
+                  style={styles.retryBtn}
+                  onClick={() => window.location.reload()}
+                >
+                  Try Again
+                </button>
+              )}
             </div>
           ) : filteredScholarships.length > 0 ? (
             filteredScholarships.map((scholarship) => (

@@ -1,9 +1,9 @@
 import { Navigate } from "react-router-dom";
+import { authService } from "../services/authService";
 
 function ProtectedRoute({ children, role }) {
-  // Get the user object
-  const stored = sessionStorage.getItem("user");
-  const user = stored ? JSON.parse(stored) : null;
+  // Get the user object from authService
+  const user = authService.getUser();
 
   if (!user) {
     // Not logged in
