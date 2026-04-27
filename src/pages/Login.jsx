@@ -16,6 +16,7 @@ function Login() {
   });
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [loginMessage, setLoginMessage] = useState("");
 
   const [showForgotPassword, setShowForgotPassword] = useState(false);
   const [forgotStep, setForgotStep] = useState("request");
@@ -35,31 +36,45 @@ function Login() {
     }
   }, []);
 
-  const resetForgotPasswordState = ({ preserveMessage = false } = {}) => {
+  useEffect(() => {
+    if (!loginMessage) {
+      return undefined;
+    }
+
+    const timer = window.setTimeout(() => {
+      setLoginMessage("");
+    }, 4000);
+
+    return () => window.clearTimeout(timer);
+  }, [loginMessage]);
+
+  const resetForgotPasswordState = () => {
     setForgotStep("request");
     setForgotEmail("");
     setBackendCode("");
     setEnteredCode("");
     setNewPassword("");
     setConfirmPassword("");
-    if (!preserveMessage) {
-      setForgotMessage("");
-    }
+    setForgotMessage("");
     setForgotError("");
     setForgotLoading(false);
   };
 
-  const toggleForgotPassword = () => {
-    const nextVisible = !showForgotPassword;
-    setShowForgotPassword(nextVisible);
+  const openForgotPassword = () => {
+    setShowForgotPassword(true);
+    setForgotEmail(formData.email || "");
+    setForgotStep("request");
+    setForgotMessage("");
+    setForgotError("");
+    setBackendCode("");
+    setEnteredCode("");
+    setNewPassword("");
+    setConfirmPassword("");
+  };
 
-    if (!nextVisible) {
-      resetForgotPasswordState();
-    } else {
-      setForgotEmail(formData.email || "");
-      setForgotMessage("");
-      setForgotError("");
-    }
+  const closeForgotPassword = () => {
+    setShowForgotPassword(false);
+    resetForgotPasswordState();
   };
 
   const handleChange = (e) => {
@@ -78,6 +93,7 @@ function Login() {
 
     setLoading(true);
     setError("");
+    setLoginMessage("");
 
     try {
       const response = await loginUser(formData.email, formData.password);
@@ -98,7 +114,6 @@ function Login() {
       };
 
       window.dispatchEvent(new Event("userChanged"));
-
       setLoading(false);
 
       if (user.role === "admin") {
@@ -134,7 +149,7 @@ function Login() {
 
       setBackendCode(String(resolvedCode));
       setForgotStep("verify");
-      setForgotMessage(response.message || "Verification code sent to your email.");
+      setForgotMessage("Code verified. Check your email for the reset code.");
     } catch (err) {
       setForgotError(err.message || "Failed to send reset code.");
     } finally {
@@ -175,21 +190,20 @@ function Login() {
     setForgotMessage("");
 
     try {
-      const response = await resetPassword(
+      await resetPassword(
         forgotEmail.trim(),
         enteredCode.trim(),
         newPassword
       );
 
-      setForgotMessage(response.message || "Password updated successfully. Please log in.");
-      setShowForgotPassword(false);
-      resetForgotPasswordState({ preserveMessage: true });
+      closeForgotPassword();
       setFormData((prev) => ({
         ...prev,
         email: forgotEmail.trim(),
         password: ""
       }));
       setError("");
+      setLoginMessage("Password changed");
     } catch (err) {
       setForgotError(err.message || "Failed to reset password.");
     } finally {
@@ -199,135 +213,165 @@ function Login() {
 
   return (
     <div style={styles.container}>
-      <div style={styles.card}>
-        <h2 style={styles.title}>Welcome Back</h2>
-        <p style={styles.subtitle}>Login to your account</p>
+      {!showForgotPassword ? (
+        <div style={styles.card}>
+          <h2 style={styles.title}>Welcome Back</h2>
+          <p style={styles.subtitle}>Login to your account</p>
 
-        {error && <p style={styles.error}>{error}</p>}
-        {forgotMessage && !showForgotPassword && <p style={styles.success}>{forgotMessage}</p>}
+          {error && <p style={styles.error}>{error}</p>}
+          {loginMessage && <p style={styles.success}>{loginMessage}</p>}
 
-        <form onSubmit={handleSubmit}>
-          <div style={styles.formGroup}>
-            <label style={styles.label}>Email</label>
-            <input
-              type="email"
-              name="email"
-              placeholder="Enter your email"
-              value={formData.email}
-              onChange={handleChange}
-              style={{ ...styles.input, borderColor: error ? "#ef4444" : "#ccc" }}
-              required
-            />
-          </div>
+          <form onSubmit={handleSubmit}>
+            <div style={styles.formGroup}>
+              <label style={styles.label}>Email</label>
+              <input
+                type="email"
+                name="email"
+                placeholder="Enter your email"
+                value={formData.email}
+                onChange={handleChange}
+                style={{ ...styles.input, borderColor: error ? "#ef4444" : "#ccc" }}
+                required
+              />
+            </div>
 
-          <div style={styles.formGroup}>
-            <label style={styles.label}>Password</label>
-            <input
-              type="password"
-              name="password"
-              placeholder="Enter your password"
-              value={formData.password}
-              onChange={handleChange}
-              style={{ ...styles.input, borderColor: error ? "#ef4444" : "#ccc" }}
-              required
-            />
-          </div>
+            <div style={styles.formGroup}>
+              <label style={styles.label}>Password</label>
+              <input
+                type="password"
+                name="password"
+                placeholder="Enter your password"
+                value={formData.password}
+                onChange={handleChange}
+                style={{ ...styles.input, borderColor: error ? "#ef4444" : "#ccc" }}
+                required
+              />
+            </div>
+
+            <div style={styles.helperRow}>
+              <button
+                type="button"
+                onClick={openForgotPassword}
+                style={styles.textButton}
+              >
+                Forgot password?
+              </button>
+            </div>
+
+            <button type="submit" style={styles.button} disabled={loading}>
+              {loading ? "Logging in..." : "Login"}
+            </button>
+          </form>
+
+          <p style={styles.registerLink}>
+            Don't have an account? <a href="/register" style={styles.link}>Register here</a>
+          </p>
+        </div>
+      ) : (
+        <div style={styles.card}>
+          <h2 style={styles.title}>Reset Password</h2>
+          <p style={styles.subtitle}>
+            {forgotStep === "request"
+              ? "Enter your account email to receive a reset code."
+              : "Enter the code from your email and set a new password."}
+          </p>
+
+          {forgotError && <p style={styles.error}>{forgotError}</p>}
+          {forgotMessage && <p style={styles.success}>{forgotMessage}</p>}
+
+          {forgotStep === "request" ? (
+            <form onSubmit={handleForgotPasswordRequest}>
+              <div style={styles.formGroup}>
+                <label style={styles.label}>Recovery Email</label>
+                <input
+                  type="email"
+                  value={forgotEmail}
+                  onChange={(e) => {
+                    setForgotEmail(e.target.value);
+                    if (forgotError) {
+                      setForgotError("");
+                    }
+                  }}
+                  placeholder="Enter your account email"
+                  style={styles.input}
+                  required
+                />
+              </div>
+
+              <button type="submit" style={styles.button} disabled={forgotLoading}>
+                {forgotLoading ? "Sending code..." : "Send verification code"}
+              </button>
+            </form>
+          ) : (
+            <form onSubmit={handlePasswordReset}>
+              <div style={styles.formGroup}>
+                <label style={styles.label}>Verification Code</label>
+                <input
+                  type="text"
+                  value={enteredCode}
+                  onChange={(e) => {
+                    setEnteredCode(e.target.value);
+                    if (forgotError) {
+                      setForgotError("");
+                    }
+                  }}
+                  placeholder="Enter the code from email"
+                  style={styles.input}
+                  required
+                />
+              </div>
+
+              <div style={styles.formGroup}>
+                <label style={styles.label}>New Password</label>
+                <input
+                  type="password"
+                  value={newPassword}
+                  onChange={(e) => {
+                    setNewPassword(e.target.value);
+                    if (forgotError) {
+                      setForgotError("");
+                    }
+                  }}
+                  placeholder="Enter new password"
+                  style={styles.input}
+                  required
+                />
+              </div>
+
+              <div style={styles.formGroup}>
+                <label style={styles.label}>Confirm Password</label>
+                <input
+                  type="password"
+                  value={confirmPassword}
+                  onChange={(e) => {
+                    setConfirmPassword(e.target.value);
+                    if (forgotError) {
+                      setForgotError("");
+                    }
+                  }}
+                  placeholder="Confirm new password"
+                  style={styles.input}
+                  required
+                />
+              </div>
+
+              <button type="submit" style={styles.button} disabled={forgotLoading}>
+                {forgotLoading ? "Updating password..." : "Change password"}
+              </button>
+            </form>
+          )}
 
           <div style={styles.helperRow}>
             <button
               type="button"
-              onClick={toggleForgotPassword}
+              onClick={closeForgotPassword}
               style={styles.textButton}
             >
-              {showForgotPassword ? "Back to login" : "Forgot password?"}
+              Back to login
             </button>
           </div>
-
-          <button type="submit" style={styles.button} disabled={loading}>
-            {loading ? "Logging in..." : "Login"}
-          </button>
-        </form>
-
-        {showForgotPassword && (
-          <div style={styles.forgotPanel}>
-            <h3 style={styles.panelTitle}>Reset Password</h3>
-            <p style={styles.panelText}>
-              {forgotStep === "request"
-                ? "Enter your email to receive a verification code."
-                : "Enter the email code and choose a new password."}
-            </p>
-
-            {forgotError && <p style={styles.error}>{forgotError}</p>}
-            {forgotMessage && showForgotPassword && <p style={styles.success}>{forgotMessage}</p>}
-
-            {forgotStep === "request" ? (
-              <form onSubmit={handleForgotPasswordRequest}>
-                <div style={styles.formGroup}>
-                  <label style={styles.label}>Recovery Email</label>
-                  <input
-                    type="email"
-                    value={forgotEmail}
-                    onChange={(e) => setForgotEmail(e.target.value)}
-                    placeholder="Enter your account email"
-                    style={styles.input}
-                    required
-                  />
-                </div>
-
-                <button type="submit" style={styles.secondaryButton} disabled={forgotLoading}>
-                  {forgotLoading ? "Sending code..." : "Send verification code"}
-                </button>
-              </form>
-            ) : (
-              <form onSubmit={handlePasswordReset}>
-                <div style={styles.formGroup}>
-                  <label style={styles.label}>Verification Code</label>
-                  <input
-                    type="text"
-                    value={enteredCode}
-                    onChange={(e) => setEnteredCode(e.target.value)}
-                    placeholder="Enter the code from email"
-                    style={styles.input}
-                    required
-                  />
-                </div>
-
-                <div style={styles.formGroup}>
-                  <label style={styles.label}>New Password</label>
-                  <input
-                    type="password"
-                    value={newPassword}
-                    onChange={(e) => setNewPassword(e.target.value)}
-                    placeholder="Enter new password"
-                    style={styles.input}
-                    required
-                  />
-                </div>
-
-                <div style={styles.formGroup}>
-                  <label style={styles.label}>Confirm Password</label>
-                  <input
-                    type="password"
-                    value={confirmPassword}
-                    onChange={(e) => setConfirmPassword(e.target.value)}
-                    placeholder="Confirm new password"
-                    style={styles.input}
-                    required
-                  />
-                </div>
-
-                <button type="submit" style={styles.secondaryButton} disabled={forgotLoading}>
-                  {forgotLoading ? "Updating password..." : "Reset password"}
-                </button>
-              </form>
-            )}
-          </div>
-        )}
-
-        <p style={styles.registerLink}>
-          Don't have an account? <a href="/register" style={styles.link}>Register here</a>
-        </p>
-      </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -368,7 +412,8 @@ const styles = {
     textAlign: "center",
     color: "#666",
     marginBottom: "24px",
-    fontSize: "14px"
+    fontSize: "14px",
+    lineHeight: "1.5"
   },
   formGroup: {
     marginBottom: "18px",
@@ -410,8 +455,9 @@ const styles = {
   },
   helperRow: {
     display: "flex",
-    justifyContent: "flex-end",
-    marginBottom: "4px"
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginTop: "8px"
   },
   textButton: {
     background: "transparent",
@@ -434,35 +480,6 @@ const styles = {
     fontWeight: "600",
     fontSize: "16px",
     transition: "all 0.3s ease"
-  },
-  secondaryButton: {
-    width: "100%",
-    padding: "12px 16px",
-    backgroundColor: "#4f46e5",
-    color: "white",
-    border: "none",
-    borderRadius: "8px",
-    cursor: "pointer",
-    fontWeight: "600",
-    fontSize: "15px",
-    transition: "all 0.3s ease"
-  },
-  forgotPanel: {
-    marginTop: "22px",
-    paddingTop: "22px",
-    borderTop: "1px solid #e5e7eb"
-  },
-  panelTitle: {
-    margin: "0 0 8px 0",
-    fontSize: "20px",
-    fontWeight: "700",
-    color: "#333"
-  },
-  panelText: {
-    margin: "0 0 18px 0",
-    color: "#666",
-    fontSize: "14px",
-    lineHeight: "1.5"
   },
   registerLink: {
     textAlign: "center",
