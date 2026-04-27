@@ -44,6 +44,33 @@ export const loginUser = async (email, password) => {
   }
 };
 
+// Function to logout user
+export const logoutUser = async () => {
+  const token = authService.getToken();
+
+  try {
+    const response = await fetch(`${API_BASE_URL}/auth/logout`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+    });
+
+    const responseText = await response.text();
+    const data = responseText ? JSON.parse(responseText) : {};
+
+    if (!response.ok) {
+      throw new Error(data?.message || "Logout failed");
+    }
+
+    return data;
+  } catch (error) {
+    console.error("Error logging out:", error);
+    throw error;
+  }
+};
+
 // Function to register user
 export const registerUser = async (name, email, password, role) => {
   try {

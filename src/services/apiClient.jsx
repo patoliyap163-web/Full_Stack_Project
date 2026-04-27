@@ -8,8 +8,7 @@ const parseResponse = async (response, fallbackMessage) => {
   const data = responseText ? JSON.parse(responseText) : {};
 
   if (response.status === 401) {
-    authService.logout();
-    window.location.href = "/login";
+    authService.handleUnauthorized(data?.message || "Session expired or logged out");
   }
 
   if (!response.ok) {
@@ -62,8 +61,6 @@ export const apiCall = async (endpoint, options = {}) => {
 
   if (response.status === 401) {
     console.log("🚫 401 Unauthorized - clearing auth and redirecting to login");
-    authService.logout();
-    window.location.href = "/login";
   }
 
   return await parseResponse(response, `API request failed: ${endpoint}`);

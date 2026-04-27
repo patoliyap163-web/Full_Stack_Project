@@ -7,12 +7,12 @@ function ProtectedRoute({ children, role }) {
 
   if (!user) {
     // Not logged in
-    return <Navigate to="/" />;
+    return <Navigate to="/login" replace />;
   }
 
   if (role && String(user.role || "").toLowerCase() !== String(role || "").toLowerCase()) {
     // Logged in but wrong role
-    return <Navigate to="/" />;
+    return <Navigate to="/login" replace />;
   }
 
   // All good, render children

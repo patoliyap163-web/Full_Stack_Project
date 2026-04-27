@@ -2,9 +2,20 @@
 
 const TOKEN_KEY = "auth_token";
 const USER_KEY = "user";
+const AUTH_MESSAGE_KEY = "auth_message";
+
+const clearStoredAuth = () => {
+  sessionStorage.removeItem(TOKEN_KEY);
+  sessionStorage.removeItem(USER_KEY);
+  localStorage.removeItem(TOKEN_KEY);
+  localStorage.removeItem(USER_KEY);
+};
+
+const redirectToLogin = () => {
+  window.location.href = "/login";
+};
 
 export const authService = {
-  // Store token in sessionStorage
   setToken: (token) => {
     if (token) {
       console.log("[auth] Storing token in sessionStorage");
@@ -15,27 +26,24 @@ export const authService = {
     }
   },
 
-  // Get token from sessionStorage
   getToken: () => {
     const token = sessionStorage.getItem(TOKEN_KEY);
     console.log("[auth] Getting token from sessionStorage:", token ? "Found" : "NOT FOUND");
     return token;
   },
 
-  // Remove token from sessionStorage
   removeToken: () => {
-    console.log("[auth] Removing token from sessionStorage");
+    console.log("[auth] Removing token from storage");
     sessionStorage.removeItem(TOKEN_KEY);
+    localStorage.removeItem(TOKEN_KEY);
   },
 
-  // Check if user is authenticated
   isAuthenticated: () => {
     const hasToken = !!sessionStorage.getItem(TOKEN_KEY);
     console.log("[auth] Authentication check:", hasToken ? "Authenticated" : "Not authenticated");
     return hasToken;
   },
 
-  // Store user data
   setUser: (user) => {
     if (user) {
       console.log("[auth] Storing user data:", user);
@@ -43,7 +51,6 @@ export const authService = {
     }
   },
 
-  // Get user data
   getUser: () => {
     const user = sessionStorage.getItem(USER_KEY);
     const parsedUser = user ? JSON.parse(user) : null;
@@ -51,13 +58,36 @@ export const authService = {
     return parsedUser;
   },
 
-  // Clear all auth data
-  logout: () => {
-    console.log("[auth] Logging out - clearing auth data");
-    sessionStorage.removeItem(TOKEN_KEY);
-    sessionStorage.removeItem(USER_KEY);
-    localStorage.removeItem(TOKEN_KEY);
-    localStorage.removeItem(USER_KEY);
+  setAuthMessage: (message) => {
+    if (message) {
+      sessionStorage.setItem(AUTH_MESSAGE_KEY, message);
+    } else {
+      sessionStorage.removeItem(AUTH_MESSAGE_KEY);
+    }
+  },
+
+  consumeAuthMessage: () => {
+    const message = sessionStorage.getItem(AUTH_MESSAGE_KEY);
+    sessionStorage.removeItem(AUTH_MESSAGE_KEY);
+    return message;
+  },
+
+  clearAuth: (message) => {
+    console.log("[auth] Clearing auth data");
+    clearStoredAuth();
+    authService.setAuthMessage(message || "");
     window.dispatchEvent(new Event("userChanged"));
+  },
+
+  handleUnauthorized: (message = "Session expired or logged out") => {
+    console.log("[auth] Unauthorized response received");
+    authService.clearAuth(message);
+    redirectToLogin();
+  },
+
+  logout: (message) => {
+    console.log("[auth] Logging out");
+    authService.clearAuth(message);
+    redirectToLogin();
   },
 };

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { loginUser } from "../services/api";
 import { authService } from "../services/authService";
@@ -13,6 +13,13 @@ function Login() {
 
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    const authMessage = authService.consumeAuthMessage();
+    if (authMessage) {
+      setError(authMessage);
+    }
+  }, []);
 
   const handleChange = (e) => {
     setFormData({

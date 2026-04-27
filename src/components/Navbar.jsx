@@ -1,6 +1,7 @@
 import { Link } from "react-router-dom";
 import { useState, useEffect } from "react";
 import { authService } from "../services/authService";
+import { logoutUser } from "../services/api";
 
 function Navbar() {
   const [hover, setHover] = useState(null);
@@ -37,13 +38,15 @@ function Navbar() {
     };
   }, []);
 
-  const handleLogout = () => {
-    // Use authService to logout (clears token and user data, dispatches event)
-    authService.logout();
-    // Update the user state immediately
-    setUser(null);
-    // Force full navigation to home to ensure landing on Home
-    window.location.href = "/";
+  const handleLogout = async () => {
+    try {
+      await logoutUser();
+    } catch (error) {
+      console.error("Logout request failed:", error);
+    } finally {
+      setUser(null);
+      authService.logout("Session expired or logged out");
+    }
   };
 
   return (
