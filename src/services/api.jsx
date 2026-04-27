@@ -71,6 +71,42 @@ export const logoutUser = async () => {
   }
 };
 
+// Function to request a password reset code
+export const requestPasswordReset = async (email) => {
+  try {
+    const response = await fetch(`${API_BASE_URL}/auth/forgot-password`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ email }),
+    });
+
+    return await parseResponse(response, "Failed to send reset code");
+  } catch (error) {
+    console.error("Error requesting password reset:", error);
+    throw error;
+  }
+};
+
+// Function to reset password after code verification
+export const resetPassword = async (email, code, newPassword) => {
+  try {
+    const response = await fetch(`${API_BASE_URL}/auth/reset-password`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ email, code, newPassword }),
+    });
+
+    return await parseResponse(response, "Failed to reset password");
+  } catch (error) {
+    console.error("Error resetting password:", error);
+    throw error;
+  }
+};
+
 // Function to register user
 export const registerUser = async (name, email, password, role) => {
   try {
