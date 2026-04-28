@@ -2,7 +2,7 @@
 import { authService } from "./authService";
 import apiCall from "./apiClient";
 
-const API_BASE_URL = "http://localhost:8080";
+const API_BASE_URL = "https://backendapp-dagb.onrender.com";
 
 const parseResponse = async (response, fallbackMessage) => {
   const responseText = await response.text();
